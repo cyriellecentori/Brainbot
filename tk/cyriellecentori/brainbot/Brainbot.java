@@ -64,8 +64,11 @@ import tk.cyriellecentori.brainbot.Monopoly.*;
 import tk.cyriellecentori.brainbot.commands.BotCommand;
 import tk.cyriellecentori.brainbot.commands.DrinkCommand;
 import tk.cyriellecentori.brainbot.commands.MessageCommand;
+import tk.cyriellecentori.brainbot.profiles.Achievement;
 import tk.cyriellecentori.brainbot.profiles.Profile;
 import tk.cyriellecentori.brainbot.profiles.ProfilesHandler;
+import tk.cyriellecentori.brainbot.shop.Aliment;
+import tk.cyriellecentori.brainbot.shop.Shop;
 import tk.cyriellecentori.brainbot.BotExceptions.*;
 
 
@@ -98,10 +101,15 @@ public class Brainbot implements EventListener {
 	public static long cyriellePrivate = 356861332106117120L;
 
 	public static long tarbouchID = 329046715619344385L;
+	public static String version = "2.6.0";
 	public static String changelog = "```diff\n"
-				+ "Brainbot version 2.5.0 – \n"
-				+ "+ Reprogrammation du système de commandes.\n"
-				+ "- Suppression d'un bug sur le b!top.\n"
+				+ "Brainbot version " + version + " – Le Frigo\n"
+				+ "- Correction d'un bug sur le b!judge.\n"
+				+ "- Suppression du monopoly de la Bolmacie.\n"
+				+ "- Correction d'un bug qui faisait s'afficher plusieurs fois les commandes dans l'aide.\n"
+				+ "+ Ajout d'un magasin pour la Bolmacie, b!bolmashop.\n"
+				+ "+ Ajout du frigo.\n"
+				+ "+ Modification des gains du b!work\n"
 				+ "```";
 
 	public static Random random = new Random();
@@ -478,6 +486,14 @@ public class Brainbot implements EventListener {
 	}
 	
 	public static void initCommands() {
+		Vector<Long> vecyr = new Vector<Long>();
+		vecyr.add(cyrielleID);
+		
+		Vector<Long> bolmaVec = new Vector<Long>();
+		bolmaVec.add(bolmabarID);
+		
+		Vector<Long> tarVec = new Vector<Long>();
+		tarVec.add(tarbouchID);
 		bcommands.put("carte", new MessageCommand("carte", "Affiche la liste des boissons. Alias : b!drinks", "Vous avez le choix parmi une multitude de boissons : \n"
 							+ "De la bière :beer: (" + prefix + "beer) \n"
 							+ "Du café :coffee: (" + prefix + "coffee) \n"
@@ -488,35 +504,22 @@ public class Brainbot implements EventListener {
 							+ "Du yop au jambon (" + prefix + "yop)\n"
 							+ "J'ai de l'eau aussi mais c'est nul (" + prefix + "water)\n"
 							+ "Les prix ? Bof, c'est pas important.\nAlors, vous prenez quoi ?"));
-		bcommands.put("drinks", new MessageCommand("drinks", "", "Vous avez le choix parmi une multitude de boissons : \n"
-							+ "De la bière :beer: (" + prefix + "beer) \n"
-							+ "Du café :coffee: (" + prefix + "coffee) \n"
-							+ "Du thé :tea: (" + prefix + "tea)\n"
-							+ "Du vin de qualité :wine_glass: (" + prefix + "wine) \n"
-							+ "Du whisky :whisky: (" + prefix + "whisky)\n"
-							+ "Du sake :sake: (" + prefix + "sake)\n"
-							+ "Du yop au jambon (" + prefix + "yop)\n"
-							+ "J'ai de l'eau aussi mais c'est nul (" + prefix + "water)\n"
-							+ "Les prix ? Bof, c'est pas important.\nAlors, vous prenez quoi ?"));
+		bcommands.put("drinks", new BotCommand.Alias("drinks", bcommands.get("carte")));
 		bcommands.put("mrboom", new MessageCommand("mrboom", "Toujours de sa faute.", "La fin du monde ? "
 						+ "Une chèvre qui mange tes parents ? "
 						+ "Ta·ton petit·e ami·e qui est en fait Cyriéphile ? "
 						+ "C'est la faute de MrBoom !"));
 		bcommands.put("invite", new MessageCommand("invite", "Invitez le bot sur votre serveur !", "V'la l'invit : " + jda.getInviteUrl(Permission.values())));
-		bcommands.put("info", new MessageCommand("info", "Des informations moi.", "Bot par Cyrielle#3528, code source disponible sur demande. Version 2.4.1"));
+		bcommands.put("info", new MessageCommand("info", "Des informations moi.", "Bot par Cyrielle#3528, code source disponible sur demande. Version " + version));
 		bcommands.put("changelog", new MessageCommand("changelog", "Les dernières modifications du code.", changelog));
-		bcommands.put("ip", new MessageCommand("ip", "", "") {
+		bcommands.put("ip", new MessageCommand("ip", "Seule une seule personne peut voir mon ip.", "", vecyr, false) {
 			public void execute(Brainbot bb, MessageReceivedEvent message) {
-				if(message.getAuthor().getIdLong() != cyrielleID)
-					return;
 				this.response = getCurrentIp();
 				super.execute(bb, message);
 			}
 		});
-		bcommands.put("admingive", new BotCommand("admingive", "") {
+		bcommands.put("admingive", new BotCommand("admingive", "Pour donner de l'argent sans en donner.", vecyr, false) {
 			public void execute(Brainbot bb, MessageReceivedEvent message) {
-				if(message.getAuthor().getIdLong() != cyrielleID)
-					return;
 				int toGive = Integer.parseInt(message.getMessage().getContentRaw().split(" ")[1]);
 				User user = message.getMessage().getMentionedUsers().get(0);
 				Profile pf = profiles.get(user.getIdLong());
@@ -525,10 +528,8 @@ public class Brainbot implements EventListener {
 				message.getChannel().sendMessage("Cyrielle a généreusement offert " + toGive + " balles à " + user.getAsMention() + " !").queue();
 			}
 		});
-		bcommands.put("mesays", new BotCommand("mesays", "") {
+		bcommands.put("mesays", new BotCommand("mesays", "Je dirai ce qu'on me dira de dire !", vecyr, false) {
 			public void execute(Brainbot bb, MessageReceivedEvent message) {
-				if(message.getAuthor().getIdLong() != cyrielleID)
-					return;
 				String toSay = message.getMessage().getContentRaw().split(" ", 2)[1];
 				message.getChannel().sendMessage(toSay).queue();
 				message.getMessage().delete().queue();
@@ -635,7 +636,7 @@ public class Brainbot implements EventListener {
 						Profile pro = profiles.get(author.getIdLong());
 						pro.worked++;
 						int modifier = (random.nextInt(5) == 0) ? -1 : 1;
-						int win = (modifier == 1) ? random.nextInt(20) + 10 : -5 - random.nextInt(10);
+						int win = (modifier == 1) ? random.nextInt(20) + 30 : -35 - random.nextInt(10);
 						pro.money += win;
 						pro.lastwork = System.currentTimeMillis();
 						String[] worksTab = works.get(message.getGuild().getIdLong() * modifier);
@@ -652,6 +653,13 @@ public class Brainbot implements EventListener {
 							if(!pro.worksCollec.get(message.getGuild().getIdLong() * modifier).contains(randomChoice)) {
 								toSend += "\nNouveau b!work ajouté à la collection !";
 								pro.worksCollec.get(message.getGuild().getIdLong() * modifier).add(randomChoice);
+								if(pro.worksCollec.get(message.getGuild().getIdLong() * modifier).size() == works.get(message.getGuild().getIdLong() * modifier).length) {
+									Achievement a = new Achievement("Travailleur acharné — " + message.getGuild().getName() 
+											+ " — " + ((modifier == 1) ? "Positifs" : "Négatifs"), "A collecté tous les travaux " + 
+									((modifier == 1) ? "positifs" : "négatifs") + " de ce serveur.", false, 0);
+									pro.achievements.add(a);
+									toSend += "\nSuccès obtenu !\n" + a.toString();
+								}
 							}
 							channel.sendMessage(toSend).queue();
 						} else {
@@ -667,21 +675,18 @@ public class Brainbot implements EventListener {
 				}
 			}
 		});
-		bcommands.put("tv", new BotCommand("tv", "Regardez la TV officielle de Tarbouchie !") {
+		bcommands.put("tv", new BotCommand("tv", "Regardez la TV officielle de Tarbouchie !", tarVec, true) {
 			public void execute(Brainbot bb, MessageReceivedEvent message) {
-				if(message.isFromGuild())
-					if(message.getGuild().getIdLong() == tarbouchID) {
-						User author = message.getAuthor();
-						MessageChannel channel = message.getChannel();
-						if(System.currentTimeMillis() - profiles.get(author.getIdLong()).lasttv >= 6L * 3600000L) {
-							channel.sendMessage(tvs[random.nextInt(tvs.length)]
-									+ "\nTa fidélité te rapporte 15 FezDollars !").queue();
-							profiles.get(author.getIdLong()).money += 15;
-							profiles.get(author.getIdLong()).lasttv = System.currentTimeMillis();
-						} else {
-							channel.sendMessage("Assez de TV pour l'instant, il faut être productif !").queue();
-						}
-					}
+				User author = message.getAuthor();
+				MessageChannel channel = message.getChannel();
+				if(System.currentTimeMillis() - profiles.get(author.getIdLong()).lasttv >= 6L * 3600000L) {
+					channel.sendMessage(tvs[random.nextInt(tvs.length)]
+							+ "\nTa fidélité te rapporte 15 FezDollars !").queue();
+					profiles.get(author.getIdLong()).money += 15;
+					profiles.get(author.getIdLong()).lasttv = System.currentTimeMillis();
+				} else {
+					channel.sendMessage("Assez de TV pour l'instant, il faut être productif !").queue();
+				}
 			}
 		});
 		bcommands.put("give", new BotCommand("give", "Donnez quelque chose à quelqu'un. N'importe quoi.") {
@@ -804,19 +809,16 @@ public class Brainbot implements EventListener {
 		});
 		bcommands.put("help", new MessageCommand("help", "Cette page d'aide.", "Voici ainsi tout ce que je peux faire :\n") {
 			public void execute(Brainbot bb, MessageReceivedEvent message) {
+				response = "Liste des commandes :\n";
 				for(Entry<String, BotCommand> bc : bcommands.entrySet()) {
 					BotCommand com = bc.getValue();
-					System.out.println(com.name);
-					System.out.println(com.help);
 					if(com.help.length() > 0) {
-						System.out.println("Concat ?");
-						if(!(com.name.equals("tv") && message.getGuild().getIdLong() != tarbouchID)) {
-							System.out.println("Concat");
+						if(com.isOkForThisServer(message.getGuild().getIdLong()) && com.isOkForThisUser(message.getAuthor().getIdLong())) {
 							response = response.concat(prefix + com.name + " : " + com.help + "\n");
 						}
 					}
 				}
-				response = response.concat(monoPrefix + "help : L'aide du Monopoly.");
+				//response = response.concat(monoPrefix + "help : L'aide du Monopoly.");
 				super.execute(bb, message);
 			}
 		});
@@ -897,22 +899,17 @@ public class Brainbot implements EventListener {
 				}
 			}
 		});
-		bcommands.put("stop", new BotCommand("stop", "") {
+		bcommands.put("stop", new BotCommand("stop", "Me tue pas stp ;-;", vecyr, false) {
 			public void execute(Brainbot bb, MessageReceivedEvent message) {
-				if(message.getAuthor().getIdLong() != cyrielleID) {
-					message.getChannel().sendMessage("T'essayes de m'tuer, hein, " + message.getAuthor().getAsMention()
-					+ "? Tss... J'suis pas si facile à descendre, moi. Raté !").queue();
-				}else {
-					message.getChannel().sendMessage("AAAAAH ! *meurt*").queue();
-					try {
-						save();
-						messageLog.close();
-						System.out.println("Extinction du bot...");
-						jda.shutdown();
-					} catch (IOException e) {
-						e.printStackTrace();
-						message.getChannel().sendMessage("ATTENTION ! Échec de la sauvegarde ;-;\nDu coup je m'éteins pas, on sait jamais.").queue();
-					}
+				message.getChannel().sendMessage("AAAAAH ! *meurt*").queue();
+				try {
+					save();
+					messageLog.close();
+					System.out.println("Extinction du bot...");
+					jda.shutdown();
+				} catch (IOException e) {
+					e.printStackTrace();
+					message.getChannel().sendMessage("ATTENTION ! Échec de la sauvegarde ;-;\nDu coup je m'éteins pas, on sait jamais.").queue();
 				}
 			}
 		});
@@ -926,11 +923,11 @@ public class Brainbot implements EventListener {
 				if(!msg.getMentions(MentionType.USER).isEmpty()) {
 					note = (int) (msg.getMentionedUsers().get(0).getIdLong() % 101);
 					toJudge = msg.getMentionedUsers().get(0).getAsMention();
-				}else if(msg.toString().contains("@everyone")) {
+				}else if(msg.getContentRaw().contains("@everyone")) {
 					channel.sendMessage("Truc à juger : UNE MENTION EVERYONE! Jugement : 0 sur 100").queue();
 					channel.sendMessage("STOP EVERYONE ! C'EST CHIANT PUTAIN ! :middle_finger: ").queue();
 					special = true;
-				}else if(msg.toString().contains("@here")) {
+				}else if(msg.getContentRaw().contains("@here")) {
 					channel.sendMessage("Truc à juger : UNE MENTION HERE ! Judgement : 1 sur 100").queue();
 					channel.sendMessage("STOP ! C'EST CHIANT ! :middle_finger: ").queue();
 					special = true;
@@ -941,8 +938,7 @@ public class Brainbot implements EventListener {
 					note = (int) (msg.getMentionedChannels().get(0).getIdLong() % 101);
 					toJudge = "Le salon " + msg.getMentionedChannels().get(0).getAsMention() + ".";
 				}else {
-
-					toJudge = msg.toString().split(" ", 2)[1];
+					toJudge = msg.getContentRaw().split(" ", 2)[1];
 					note = Math.abs(toJudge.toLowerCase().hashCode() % 101);
 
 				}
@@ -974,12 +970,93 @@ public class Brainbot implements EventListener {
 			}
 		});
 		
-		bmcommands.put("admin_init", new BotCommand("admin_init", "Initialisation de la partie de monopoly pour ce serveur.") {
+		LinkedHashMap<String, Vector<Shop.Item>> bolmitems = new LinkedHashMap<String, Vector<Shop.Item>>();
+		Vector<Shop.Item> bolmaroles = new Vector<Shop.Item>();
+		bolmaroles.add(new Shop.RoleItem(50000, 836953014094397452L, "Riche", "Montrez votre richesse !"));
+		bolmaroles.add(new Shop.RoleItem(100000, 836953010500272129L, "Richissime", "Montrez votre richesse, mais encore plus !"));
+		bolmaroles.add(new Shop.RoleItem(9999, 836971648199557160L, "tEm armorr", "tU va dèff tTS lé énmi (Vous rend invulnérable à toutes les insultes)"));
+		bolmitems.put("Rôles", bolmaroles);
+		
+		bcommands.put("bolmashop", new Shop("bolmashop", "La boutique officielle du bar !", bolmitems, bolmaVec));
+		
+		bcommands.put("frigo", new MessageCommand("frigo", "Je fais la liste de ce que contient votre frigo !", "", bolmaVec, true) {
 			public void execute(Brainbot bb, MessageReceivedEvent message) {
-				if(message.getAuthor().getIdLong() != cyrielleID) {
-					message.getChannel().sendMessage("Vous n'avez pas l'autorisation d'executer des commandes administrateur.").queue();
-					return;
+				if(Brainbot.profiles.get(message.getAuthor().getIdLong()).isFrigoVide())
+					response = "Le frigo est vide ;-;";
+				else {
+					response = "Contenu de votre frigo :\n";
+					response += Brainbot.profiles.get(message.getAuthor().getIdLong()).getFrigo();
 				}
+				super.execute(bb, message);
+			}
+		});
+		
+		bcommands.put("frigo_note", new MessageCommand("frigo_note", "Je note votre frigo.", "", bolmaVec, true) {
+			public void execute(Brainbot bb, MessageReceivedEvent message) {
+				if(Brainbot.profiles.get(message.getAuthor().getIdLong()).isFrigoVide())
+					response = "Le frigo est vide ;-;";
+				else {
+					response = "Note de ton frigo : ";
+					int note = Brainbot.profiles.get(message.getAuthor().getIdLong()).getFrigoScore();
+					response += note + "/10 — ";
+					if(note > 10) {
+						response += "INCROYABLE ! Nan franchement je pourrais pas rêver meilleur frigo.";
+					} else if(note == 10) {
+						response += "Le frigo parfait.";
+					} else if(note >= 8) {
+						response += "Pas mal, pas mal.";
+					} else if(note >= 6) {
+						response += "Bien, mais peut mieux faire.";
+					} else if(note >= 4) {
+						response += "Peux mieux faire.";
+					} else if(note >= 2) {
+						response += "Pas ouf, franchement, hein…";
+					} else if(note == 1) {
+						response += "Qu'est-ce que c'est que cette merde.";
+					} else if(note == 0) {
+						response += "Ok je sens que je vais vomir referme moi ça.";
+					} else {
+						response += "WHAT THE FUCK qu'est-ce que ce PUTAIN de frigo !";
+					}
+				}
+				super.execute(bb, message);
+			}
+		});
+		
+		LinkedHashMap<String, Vector<Shop.Item>> aliments = new LinkedHashMap<String, Vector<Shop.Item>>();
+		Vector<Shop.Item> alimentsVec = new Vector<Shop.Item>();
+		for(Aliment a : Aliment.aliments) {
+			alimentsVec.add(a);
+		}
+		aliments.put("Aliments", alimentsVec);
+		
+		bcommands.put("foodshop", new Shop("foodshop", "Le magasin de nourriture du bar !", aliments, bolmaVec));
+		
+		bcommands.put("frigo_eat", new MessageCommand("frigo_eat", "Manger quelque chose de votre frigo ! Utilisation : frigo_del ID, ID étant l'identifiant de la position de l'aliment à supprimer.", "", bolmaVec, true) {
+			public void execute(Brainbot bb, MessageReceivedEvent message) {
+				if(Brainbot.profiles.get(message.getAuthor().getIdLong()).isFrigoVide())
+					response = "Le frigo est vide ;-;";
+				else
+					try {
+						int toDel = Integer.parseInt(message.getMessage().getContentRaw().split(" ")[1]);
+						Profile pro = Brainbot.profiles.get(message.getAuthor().getIdLong());
+						Aliment r = pro.removeAliment(toDel);
+						if(r == null) {
+							response = "Cet aliment n'existe pas.";
+						} else {
+							response = "Tu manges l'aliment « " + r.name + " ».";
+						}
+					} catch(NumberFormatException e) {
+						response = "C'est pas un nombre entier, ça.";
+					} catch(ArrayIndexOutOfBoundsException e) {
+						response = "Tu peux pas tout manger d'un coup.";
+					}
+				super.execute(bb, message);
+			}
+		});
+		
+		bmcommands.put("admin_init", new BotCommand("admin_init", "Initialisation de la partie de monopoly pour ce serveur.", vecyr, false) {
+			public void execute(Brainbot bb, MessageReceivedEvent message) {
 				int set = Integer.parseInt(message.getMessage().getContentRaw().split(" ")[1]);
 				initMonopolySets();
 				if(initMonopoly(set, message.getGuild(), false)) {
@@ -990,12 +1067,8 @@ public class Brainbot implements EventListener {
 			}
 		});
 		
-		bmcommands.put("admin_delete", new BotCommand("admin_delete", "Supprime la partie de monopoly du serveur.") {
+		bmcommands.put("admin_delete", new BotCommand("admin_delete", "Supprime la partie de monopoly du serveur.", vecyr, false) {
 			public void execute(Brainbot bb, MessageReceivedEvent message) {
-				if(message.getAuthor().getIdLong() != cyrielleID) {
-					message.getChannel().sendMessage("Vous n'avez pas l'autorisation d'executer des commandes administrateur.").queue();
-					return;
-				}
 				if(monopolyParties.containsKey(message.getGuild().getIdLong())) {
 					monopolyParties.remove(message.getGuild().getIdLong());
 					message.getChannel().sendMessage("Partie de monopoly supprimée du serveur.").queue();
@@ -1005,12 +1078,8 @@ public class Brainbot implements EventListener {
 			}
 		});
 		
-		bmcommands.put("admin_move", new BotCommand("admin_move", "Déplace un joueur sur la case désirée.") {
+		bmcommands.put("admin_move", new BotCommand("admin_move", "Déplace un joueur sur la case désirée.", vecyr, false) {
 			public void execute(Brainbot bb, MessageReceivedEvent message) {
-				if(message.getAuthor().getIdLong() != cyrielleID) {
-					message.getChannel().sendMessage("Vous n'avez pas l'autorisation d'executer des commandes administrateur.").queue();
-					return;
-				}
 				int sq = Integer.parseInt(message.getMessage().getContentRaw().split(" ")[1]);
 				long id = Long.parseLong(message.getMessage().getContentRaw().split(" ")[2]);
 				monopolyParties.get(message.getGuild().getIdLong()).toCase(profiles.get(id), message.getChannel(), sq);
@@ -1018,24 +1087,16 @@ public class Brainbot implements EventListener {
 			}
 		});
 		
-		bmcommands.put("admin_reset_cd", new BotCommand("admin_reset_cd", "Réinitialise le cooldown d'un joueur.") {
+		bmcommands.put("admin_reset_cd", new BotCommand("admin_reset_cd", "Réinitialise le cooldown d'un joueur.", vecyr, false) {
 			public void execute(Brainbot bb, MessageReceivedEvent message) {
-				if(message.getAuthor().getIdLong() != cyrielleID) {
-					message.getChannel().sendMessage("Vous n'avez pas l'autorisation d'executer des commandes administrateur.").queue();
-					return;
-				}
 				long id = Long.parseLong(message.getMessage().getContentRaw().split(" ")[1]);
 				profiles.get(id).lastPlays.put(message.getGuild().getIdLong(), 0L);
 				message.getChannel().sendMessage("Le countdown de ce joueur a été annulé.").queue();
 			}
 		});
 		
-		bmcommands.put("admin_set_proprio", new BotCommand("admin_set_proprio", "Donne une propriété à un joueur.") {
+		bmcommands.put("admin_set_proprio", new BotCommand("admin_set_proprio", "Donne une propriété à un joueur.", vecyr, false) {
 			public void execute(Brainbot bb, MessageReceivedEvent message) {
-				if(message.getAuthor().getIdLong() != cyrielleID) {
-					message.getChannel().sendMessage("Vous n'avez pas l'autorisation d'executer des commandes administrateur.").queue();
-					return;
-				}
 				int sq = Integer.parseInt(message.getMessage().getContentRaw().split(" ")[1]);
 				long id = Long.parseLong(message.getMessage().getContentRaw().split(" ")[2]);
 				try {
@@ -1049,12 +1110,8 @@ public class Brainbot implements EventListener {
 			}
 		});
 		
-		bmcommands.put("admin_plateau", new BotCommand("admin_plateau", "Affiche le plateau du jeu.") {
+		bmcommands.put("admin_plateau", new BotCommand("admin_plateau", "Affiche le plateau du jeu.", vecyr, false) {
 			public void execute(Brainbot bb, MessageReceivedEvent message) {
-				if(message.getAuthor().getIdLong() != cyrielleID) {
-					message.getChannel().sendMessage("Vous n'avez pas l'autorisation d'executer des commandes administrateur.").queue();
-					return;
-				}
 				String plat = monopolyParties.get(message.getGuild().getIdLong()).toString();
 				String[] spli = plat.split("\n");
 				String send = "";
@@ -1069,12 +1126,8 @@ public class Brainbot implements EventListener {
 			}
 		});
 		
-		bmcommands.put("admin_players", new BotCommand("admin_players", "Affiche le détail des joueurs.") {
+		bmcommands.put("admin_players", new BotCommand("admin_players", "Affiche le détail des joueurs.", vecyr, false) {
 			public void execute(Brainbot bb, MessageReceivedEvent message) {
-				if(message.getAuthor().getIdLong() != cyrielleID) {
-					message.getChannel().sendMessage("Vous n'avez pas l'autorisation d'executer des commandes administrateur.").queue();
-					return;
-				}
 				String plat = monopolyParties.get(message.getGuild().getIdLong()).getPlayersDesc();
 				String[] spli = plat.split("\n");
 				String send = "";
@@ -1214,6 +1267,45 @@ public class Brainbot implements EventListener {
 			}
 			
 		});
+		
+		bcommands.put("devtest", new BotCommand("devtest", "", vecyr, false) {
+			
+			public int getFrigoScore(Vector<Aliment> frigo) {
+				int tot = (frigo.size() < 10) ? 10 : frigo.size();
+				int note = 0;
+				LinkedHashMap<Aliment, Integer> dejaVu = new LinkedHashMap<Aliment, Integer>();
+				for(Aliment a : frigo) {
+					double modifier = 1;
+					if(dejaVu.containsKey(a)) {
+						modifier = Math.exp(-dejaVu.get(a) / 3d);
+						dejaVu.put(a, dejaVu.get(a) + 1);
+					} else {
+						dejaVu.put(a, 1);
+					}
+					note += modifier * a.score;
+				}
+				if(frigo.size() < 10)
+					note += (10 - frigo.size()) * 2;
+				return Math.round(note / tot);
+			}
+			
+			@Override
+			public void execute(Brainbot bb, MessageReceivedEvent message) {
+				int scoreMoy = 0;
+				for(int i = 0; i < 100; i++) {
+					int taille = random.nextInt(90) + 10;
+					Vector<Aliment> frigoTest = new Vector<Aliment>();
+					for(int j = 0; j < taille; j++) {
+						frigoTest.add(Aliment.aliments[random.nextInt(Aliment.aliments.length)]);
+					}
+					scoreMoy += getFrigoScore(frigoTest);
+				}
+				message.getChannel().sendMessage("Moyenne de 100 frigos : " + scoreMoy / 100d).queue();
+			}
+			
+		});
+		
+		
 	}
 
 	@Override
@@ -1381,7 +1473,7 @@ public class Brainbot implements EventListener {
 
 				if(!msg.contains("┬─┬ ノ( ゜-゜ノ)")) {
 					if(author.getIdLong() == 363003065575407616L) {
-						channel.sendMessage("J'abandonne. Toi t'es trop un génie. Mais tu me fais énormément chier.").queue();
+						channel.sendMessage("Bon, normalement je devrais être en colère mais… BON RETOUR PARMI NOUS PUTAIN !").queue();
 					}else if(author.getIdLong() == cyrielleID) {
 						channel.sendMessage("N'oublie pas de bien la remettre après stp!").queue();
 					}else {
@@ -1403,9 +1495,13 @@ public class Brainbot implements EventListener {
 			}
 			try {
 				if(prefix.equals(prefixUsed[0] + "!")) {
-					bcommands.get(prefixUsed[1]).execute(this, event);
+					BotCommand com = bcommands.get(prefixUsed[1]);
+					if(com.isOkForThisServer(message.getGuild().getIdLong()) && com.isOkForThisUser(message.getAuthor().getIdLong()))
+						com.execute(this, event);
 				}else if(monoPrefix.equals(prefixUsed[0] + "!")) {
-					bmcommands.get(prefixUsed[1]).execute(this, event);
+					BotCommand com = bmcommands.get(prefixUsed[1]);
+					if(com.isOkForThisServer(message.getGuild().getIdLong()) && com.isOkForThisUser(message.getAuthor().getIdLong()))
+						com.execute(this, event);
 				}
 			} catch(NullPointerException e) {
 				channel.sendMessage("Commande inconnue.").queue();

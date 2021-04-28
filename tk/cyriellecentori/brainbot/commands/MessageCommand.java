@@ -1,5 +1,7 @@
 package tk.cyriellecentori.brainbot.commands;
 
+import java.util.Vector;
+
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import tk.cyriellecentori.brainbot.Brainbot;
 
@@ -9,6 +11,16 @@ public class MessageCommand extends BotCommand {
 	
 	public MessageCommand(String name, String help, String response) {
 		super(name, help);
+		this.response = response; 
+	}
+	
+	public MessageCommand(String name, String help, String response, Vector<Long> a, Vector<Long> b) {
+		super(name, help, a, b);
+		this.response = response; 
+	}
+	
+	public MessageCommand(String name, String help, String response, Vector<Long> a, boolean b) {
+		super(name, help, a, b);
 		this.response = response; 
 	}
 
