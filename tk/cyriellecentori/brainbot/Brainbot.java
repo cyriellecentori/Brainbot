@@ -65,8 +65,10 @@ import tk.cyriellecentori.brainbot.commands.BotCommand;
 import tk.cyriellecentori.brainbot.commands.DrinkCommand;
 import tk.cyriellecentori.brainbot.commands.MessageCommand;
 import tk.cyriellecentori.brainbot.profiles.Achievement;
+import tk.cyriellecentori.brainbot.profiles.AchievementFood;
 import tk.cyriellecentori.brainbot.profiles.Profile;
 import tk.cyriellecentori.brainbot.profiles.ProfilesHandler;
+import tk.cyriellecentori.brainbot.profiles.AchievementFood.Contains;
 import tk.cyriellecentori.brainbot.shop.Aliment;
 import tk.cyriellecentori.brainbot.shop.Shop;
 import tk.cyriellecentori.brainbot.BotExceptions.*;
@@ -101,15 +103,15 @@ public class Brainbot implements EventListener {
 	public static long cyriellePrivate = 356861332106117120L;
 
 	public static long tarbouchID = 329046715619344385L;
-	public static String version = "2.6.0";
+	public static String version = "2.7.0";
 	public static String changelog = "```diff\n"
-				+ "Brainbot version " + version + " – Le Frigo\n"
-				+ "- Correction d'un bug sur le b!judge.\n"
-				+ "- Suppression du monopoly de la Bolmacie.\n"
-				+ "- Correction d'un bug qui faisait s'afficher plusieurs fois les commandes dans l'aide.\n"
-				+ "+ Ajout d'un magasin pour la Bolmacie, b!bolmashop.\n"
-				+ "+ Ajout du frigo.\n"
-				+ "+ Modification des gains du b!work\n"
+				+ "Brainbot version " + version + " – Les Succès\n"
+				+ "+ Ajout d'un système de Succès\n"
+				+ "+ Ajout de succès en rapport avec le Frigo\n"
+				+ "+ Ajout de succès cachés.\n"
+				+ "+ Ajout de b!achievements.\n"
+				+ "+ Affichage des succès eus sur le profil.\n"
+				+ "- Correction de la lisibilité des aliments.\n"
 				+ "```";
 
 	public static Random random = new Random();
@@ -486,6 +488,124 @@ public class Brainbot implements EventListener {
 	}
 	
 	public static void initCommands() {
+		
+		Aliment[] tem = new Aliment[100];
+		Aliment temF = Aliment.searchAliment("Tem flak");
+		for(int i = 0; i < 100; i++) {
+			tem[i] = temF;
+		}
+		
+		AchievementFood.frigoAchievements  = new AchievementFood[]{
+				new AchievementFood.Contains("Un frigo comme Cyrielle", "Ayez le même frigo que Cyrielle", false, 500, new Aliment[]{
+						Aliment.searchAliment("Tarte Caramel-Cannelle"),
+						Aliment.searchAliment("Fraises"),
+						Aliment.searchAliment("Beurre salé"),
+						Aliment.searchAliment("Pastèque"),
+						Aliment.searchAliment("Crème Chantilly"),
+						Aliment.searchAliment("Noisettes"),
+						Aliment.searchAliment("Truffade"),
+						Aliment.searchAliment("Boblenna"),
+						Aliment.searchAliment("Pomme de terre"),
+						Aliment.searchAliment("Kouign-Amann"),
+						Aliment.searchAliment("Brocoli")
+					}, true),
+				new AchievementFood.Contains("i cAN GO TO COOLEG!", "Achetez assez de Temmie Flakes pour leur permettre d'obtenir une éducation.", true, 200, tem, false),
+				new AchievementFood.Note("Le Frigo Parfait", "Ayez un score de 10/10 ou plus sur votre Frigo.", false, 7500, 10, false),
+				new AchievementFood.Note("Le Frigo Plus-Que-Parfait", "Ayez le score maximal sur votre Frigo.", false, 10000, 13, true),
+				new AchievementFood.Contains("Purgatoire", "Ayez un frigo contenant à la fois du beurre doux et du beurre salé.", false, 500, new Aliment[] {
+						Aliment.searchAliment("Beurre salé"),
+						Aliment.searchAliment("Beurre doux")
+				}, false),
+				new AchievementFood.Contains("Paradis", "Faites de votre Frigo un paradis.", true, 2500, new Aliment[] {
+						Aliment.searchAliment("Beurre salé"),
+						Aliment.searchAliment("Beurre salé"),
+						Aliment.searchAliment("Beurre salé"),
+						Aliment.searchAliment("Beurre salé"),
+						Aliment.searchAliment("Beurre salé")
+				}, false),
+				new AchievementFood.Contains("Enfer", "Faites de votre Frigo un enfer.", true, 1, new Aliment[] {
+						Aliment.searchAliment("Beurre doux"),
+						Aliment.searchAliment("Beurre doux"),
+						Aliment.searchAliment("Beurre doux"),
+						Aliment.searchAliment("Beurre doux"),
+						Aliment.searchAliment("Beurre doux")
+				}, false),
+				new AchievementFood.Note("Vomi du barman", "Faites vomir le patron.", true, 1, 0, true),
+				new AchievementFood.Note("Perfectly balanced", "As all things should be.", true, 500, 5, true),
+				new AchievementFood.Contains("Frigo dangereux", "Placez le danger dans votre frigo.", true, 5000, new Aliment[] {
+						Aliment.searchAliment("Truffade"),
+						Aliment.searchAliment("Kouign-Amann"),
+						Aliment.searchAliment("Sirop d'Orgeat"),
+						Aliment.searchAliment("Roblochon"),
+						Aliment.searchAliment("Brandade de Morue"),
+						Aliment.searchAliment("Paté"),
+						Aliment.searchAliment("Tem flak")
+				}, false),
+				new AchievementFood.Contains("Notch", "Achetez sa pomme.", false, 0, new Aliment[] {
+						Aliment.searchAliment("Pomme de Notch")
+				}, false),
+				new AchievementFood.Contains("Ça ne marche pas comme ça…", "Tentez de l'alchimie à base de pommes d'or.", true, 15000, new Aliment[] {
+						Aliment.searchAliment("Pomme d'or"),
+						Aliment.searchAliment("Pomme d'or"),
+						Aliment.searchAliment("Pomme d'or"),
+						Aliment.searchAliment("Pomme d'or"),
+						Aliment.searchAliment("Pomme d'or"),
+						Aliment.searchAliment("Pomme d'or"),
+						Aliment.searchAliment("Pomme d'or"),
+						Aliment.searchAliment("Pomme d'or"),
+						Aliment.searchAliment("Pomme d'or"),
+						Aliment.searchAliment("Pomme d'or")
+				}, false),
+				new AchievementFood.Contains("Une odeur de provence", "Faites entrer la provence dans votre frigo.", true, 5000, new Aliment[] {
+						Aliment.searchAliment("Herbes de provence"),
+						Aliment.searchAliment("Gambetta"),
+						Aliment.searchAliment("Pomme de terre"),
+						Aliment.searchAliment("Olives"),
+						Aliment.searchAliment("Glace à la vanille")
+				}, false),
+				new AchievementFood.Contains("Cheese Master", "Achetez tout le fromage du monde.", false, 2000, new Aliment[] {
+						Aliment.searchAliment("Roblochon"),
+						Aliment.searchAliment("Saint-Nectaire"),
+						Aliment.searchAliment("Emmental"),
+						Aliment.searchAliment("Fromage de chèvre"),
+						Aliment.searchAliment("Truffade"),
+						Aliment.searchAliment("Aligot"),
+						Aliment.searchAliment("Raclette"),
+						Aliment.searchAliment("Tartiflette"),
+						Aliment.searchAliment("Saucisson au Saint-Nectaire")
+				}, false),
+				new AchievementFood.Contains("Un volcan dans le frigo", "Faites pousser un volcan dans votre frigo.", true, 5000, new Aliment[] {
+						Aliment.searchAliment("Croissant aux amandes"),
+						Aliment.searchAliment("Pâtisserie du Saint-Laurent"),
+						Aliment.searchAliment("Saint-Nectaire"),
+						Aliment.searchAliment("Truffade"),
+						Aliment.searchAliment("Aligot"),
+						Aliment.searchAliment("Pomme de terre"),
+						Aliment.searchAliment("Saucisson"),
+						Aliment.searchAliment("Saucisson au Saint-Nectaire")
+				}, false),
+				new AchievementFood.Contains("Qu'est-ce que c'est que cette odeur", "Sérieusement, beurk.", true, 10000, new Aliment[] {
+						Aliment.searchAliment("Roblochon"),
+						Aliment.searchAliment("Roblochon"),
+						Aliment.searchAliment("Roblochon"),
+						Aliment.searchAliment("Roblochon"),
+						Aliment.searchAliment("Roblochon"),
+						Aliment.searchAliment("Roblochon"),
+						Aliment.searchAliment("Roblochon"),
+						Aliment.searchAliment("Roblochon"),
+						Aliment.searchAliment("Roblochon"),
+						Aliment.searchAliment("Roblochon")
+				}, false),
+				new AchievementFood.Contains("Sponsorisé par MTT", "Faites sponsoriser votre frigo.", true, 5000, new Aliment[] {
+						Aliment.searchAliment("Tarte Caramel-Cannelle"),
+						Aliment.searchAliment("Glamburger"),
+						Aliment.searchAliment("Glamburger"),
+						Aliment.searchAliment("Glamburger"),
+						Aliment.searchAliment("Tem flak"),
+						Aliment.searchAliment("Cannelle")
+				}, false)
+			};
+		
 		Vector<Long> vecyr = new Vector<Long>();
 		vecyr.add(cyrielleID);
 		
@@ -657,7 +777,7 @@ public class Brainbot implements EventListener {
 									Achievement a = new Achievement("Travailleur acharné — " + message.getGuild().getName() 
 											+ " — " + ((modifier == 1) ? "Positifs" : "Négatifs"), "A collecté tous les travaux " + 
 									((modifier == 1) ? "positifs" : "négatifs") + " de ce serveur.", false, 0);
-									pro.achievements.add(a);
+									pro.giveAchievement(a, message);
 									toSend += "\nSuccès obtenu !\n" + a.toString();
 								}
 							}
@@ -987,6 +1107,7 @@ public class Brainbot implements EventListener {
 					response = "Contenu de votre frigo :\n";
 					response += Brainbot.profiles.get(message.getAuthor().getIdLong()).getFrigo();
 				}
+				Brainbot.profiles.get(message.getAuthor().getIdLong()).checkFrigoAchievements(message);
 				super.execute(bb, message);
 			}
 		});
@@ -1019,6 +1140,7 @@ public class Brainbot implements EventListener {
 						response += "WHAT THE FUCK qu'est-ce que ce PUTAIN de frigo !";
 					}
 				}
+				Brainbot.profiles.get(message.getAuthor().getIdLong()).checkFrigoAchievements(message);
 				super.execute(bb, message);
 			}
 		});
@@ -1051,8 +1173,53 @@ public class Brainbot implements EventListener {
 					} catch(ArrayIndexOutOfBoundsException e) {
 						response = "Tu peux pas tout manger d'un coup.";
 					}
+				Brainbot.profiles.get(message.getAuthor().getIdLong()).checkFrigoAchievements(message);
 				super.execute(bb, message);
 			}
+		});
+		
+		bcommands.put("give_achievement", new BotCommand("give_achievement", "Donne un tout nouvel achievement à quelqu'un !", vecyr, false) {
+
+			@Override
+			public void execute(Brainbot bb, MessageReceivedEvent message) {
+				try {
+					String[] args = message.getMessage().getContentRaw().split(" ", 5);
+					Brainbot.profiles.get(Long.decode(args[1])).giveAchievement(new Achievement(args[2], args[4], true, Integer.parseInt(args[3])), message);
+				} catch(ArrayIndexOutOfBoundsException | NumberFormatException e) {
+					message.getChannel().sendMessage("Ordre des paramètres : ID_utilisateur nom récompense description.");
+				}
+				
+			}
+			
+		});
+		
+		bcommands.put("achievements", new MessageCommand("achievements", "Liste certains succès (mais pas tous !).", "", bolmaVec, true) {
+			@Override
+			public void execute(Brainbot bb, MessageReceivedEvent message) {
+				response = "Liste non-exhaustive des succès :\n";
+				for(AchievementFood af : AchievementFood.frigoAchievements) {
+					response += (af.secret ? "*" : "") + af.name + (af.secret ? "*" : "") + " : ";
+					response += (af.secret ? "Secret." : af.desc);
+					response += ((af.reward > 0) ? " — Récompense : " + af.reward : "") + "\n";
+				}
+				super.execute(bb, message);
+				
+			}
+		});
+		
+		bcommands.put("delach", new BotCommand("delach", "", vecyr, true) {
+
+			@Override
+			public void execute(Brainbot bb, MessageReceivedEvent message) {
+				try {
+					String[] args = message.getMessage().getContentRaw().split(" ", 3);
+					Brainbot.profiles.get(Long.decode(args[1])).removeAchievement(Integer.parseInt(args[2]));
+				} catch(ArrayIndexOutOfBoundsException | NumberFormatException e) {
+					message.getChannel().sendMessage("Ordre des paramètres : ID_utilisateur ID_ach");
+				}
+				
+			}
+			
 		});
 		
 		bmcommands.put("admin_init", new BotCommand("admin_init", "Initialisation de la partie de monopoly pour ce serveur.", vecyr, false) {
@@ -1270,37 +1437,9 @@ public class Brainbot implements EventListener {
 		
 		bcommands.put("devtest", new BotCommand("devtest", "", vecyr, false) {
 			
-			public int getFrigoScore(Vector<Aliment> frigo) {
-				int tot = (frigo.size() < 10) ? 10 : frigo.size();
-				int note = 0;
-				LinkedHashMap<Aliment, Integer> dejaVu = new LinkedHashMap<Aliment, Integer>();
-				for(Aliment a : frigo) {
-					double modifier = 1;
-					if(dejaVu.containsKey(a)) {
-						modifier = Math.exp(-dejaVu.get(a) / 3d);
-						dejaVu.put(a, dejaVu.get(a) + 1);
-					} else {
-						dejaVu.put(a, 1);
-					}
-					note += modifier * a.score;
-				}
-				if(frigo.size() < 10)
-					note += (10 - frigo.size()) * 2;
-				return Math.round(note / tot);
-			}
-			
 			@Override
 			public void execute(Brainbot bb, MessageReceivedEvent message) {
-				int scoreMoy = 0;
-				for(int i = 0; i < 100; i++) {
-					int taille = random.nextInt(90) + 10;
-					Vector<Aliment> frigoTest = new Vector<Aliment>();
-					for(int j = 0; j < taille; j++) {
-						frigoTest.add(Aliment.aliments[random.nextInt(Aliment.aliments.length)]);
-					}
-					scoreMoy += getFrigoScore(frigoTest);
-				}
-				message.getChannel().sendMessage("Moyenne de 100 frigos : " + scoreMoy / 100d).queue();
+				
 			}
 			
 		});

@@ -1,5 +1,6 @@
 package tk.cyriellecentori.brainbot.shop;
 
+import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import tk.cyriellecentori.brainbot.Brainbot;
 import tk.cyriellecentori.brainbot.profiles.Profile;
 import tk.cyriellecentori.brainbot.shop.Shop.Item;
@@ -15,8 +16,23 @@ public class Aliment extends Item {
 	}
 
 	@Override
-	public boolean execute(Brainbot bb, Profile buyer) {
-		return buyer.addAliment(this);
+	public boolean execute(Brainbot bb, Profile buyer, MessageReceivedEvent command) {
+		boolean ret = buyer.addAliment(this);
+		buyer.checkFrigoAchievements(command);
+		return ret;
+	}
+	
+	public static Aliment searchAliment(String name) {
+		Aliment search = null;
+		for(Aliment a : aliments) {
+			if(a.name.equals(name)) {
+				search = a;
+				break;
+			}
+		}
+		if(search == null)
+			System.out.println("Aliment non trouvé : " + name);
+		return search;
 	}
 	
 	public static Aliment[] aliments = {

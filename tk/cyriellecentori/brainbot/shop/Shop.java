@@ -24,7 +24,7 @@ public class Shop extends MessageCommand {
 			this.name = name;
 			this.description = description;
 		}
-		public abstract boolean execute(Brainbot bb, Profile buyer);
+		public abstract boolean execute(Brainbot bb, Profile buyer, MessageReceivedEvent command);
 	}
 	
 	public static class RoleItem extends Item {
@@ -36,7 +36,7 @@ public class Shop extends MessageCommand {
 		}
 
 		@Override
-		public boolean execute(Brainbot bb, Profile buyer) {
+		public boolean execute(Brainbot bb, Profile buyer, MessageReceivedEvent command) {
 			boolean addRole = Brainbot.jda.getRoleById(role).getGuild().getMemberById(buyer.id).getRoles().contains(Brainbot.jda.getRoleById(role));
 			if(!addRole) {
 				Brainbot.jda.getRoleById(role).getGuild().addRoleToMember(buyer.id, Brainbot.jda.getRoleById(role)).queue();
@@ -64,7 +64,7 @@ public class Shop extends MessageCommand {
 				for(Entry<String, Vector<Item>> cat : items.entrySet()) {
 					ret = ret.concat("**" + cat.getKey() + "** :\n");
 					for(Item i : cat.getValue()) {
-						ret = ret.concat(i.name + " (" + i.cost + " " + Brainbot.getCurrency(message.getGuild().getIdLong()) + ") — " + i.description + "\n");
+						ret = ret.concat("__" + i.name + "__ (" + i.cost + " " + Brainbot.getCurrency(message.getGuild().getIdLong()) + ") — " + i.description + "\n");
 					}
 					ret = ret.concat("\n");
 				}
@@ -88,7 +88,7 @@ public class Shop extends MessageCommand {
 						response = "T'as pas assez de flouze.";
 					} else {
 						//response = searched.name + " acheté !";
-						if(!searched.execute(bb, user)) {
+						if(!searched.execute(bb, user, message)) {
 							if(searched instanceof RoleItem)
 								response = "Tu peux pas acheter ça plusieurs fois.";
 							else if(searched instanceof Aliment)

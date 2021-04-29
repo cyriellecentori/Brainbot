@@ -16,4 +16,5 @@ public class Achievement {
 	public String toString() {
 		return (secret ? "*" : "") + name + " : " + desc + (secret ? "*" : "") ;
 	}
+	
 }

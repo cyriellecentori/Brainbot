@@ -5,6 +5,8 @@ import java.util.Vector;
 import java.util.Map.Entry;
 
 import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.MessageChannel;
+import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import tk.cyriellecentori.brainbot.Brainbot;
 import tk.cyriellecentori.brainbot.shop.Aliment;
 
@@ -112,6 +114,25 @@ public class Profile{
 		return Math.round(note / tot);
 	}
 	
+	public static int getFrigoScore(Vector<Aliment> frigo) {
+		int tot = (frigo.size() < 10) ? 10 : frigo.size();
+		int note = 0;
+		LinkedHashMap<Aliment, Integer> dejaVu = new LinkedHashMap<Aliment, Integer>();
+		for(Aliment a : frigo) {
+			double modifier = 1;
+			if(dejaVu.containsKey(a)) {
+				modifier = Math.exp(-dejaVu.get(a) / 3d);
+				dejaVu.put(a, dejaVu.get(a) + 1);
+			} else {
+				dejaVu.put(a, 1);
+			}
+			note += modifier * a.score;
+		}
+		if(frigo.size() < 10)
+			note += (10 - frigo.size()) * 2;
+		return Math.round(note / tot);
+	}
+	
 	public String getFrigo() {
 		String list = "";
 		for(int i = 0; i < frigo.size(); i++) {
@@ -122,5 +143,27 @@ public class Profile{
 	
 	public boolean isFrigoVide() {
 		return frigo.size() == 0;
+	}
+	
+	public void giveAchievement(Achievement a, MessageReceivedEvent command) {
+		if(!achievements.contains(a)) {
+			achievements.add(a);
+			money += a.reward;
+			command.getChannel().sendMessage("Succès " + (a.secret ? "secret " : "") + "obtenu !\n**" + a.name + "**" + 
+					((a.reward > 0) ? (" — Vous obtenez " + a.reward + " " + Brainbot.getCurrency(command.getGuild().getIdLong()) + " !") : "")).queue();
+		}
+	}
+	
+	public void checkFrigoAchievements(MessageReceivedEvent command) {
+		for(AchievementFood af : AchievementFood.frigoAchievements) {
+			if(!achievements.contains(af))
+				if(af.isUnlock(frigo)) {
+					giveAchievement(af, command);
+				}
+		}
+	}
+	
+	public void removeAchievement(int id) {
+		achievements.remove(id);
 	}
 }
