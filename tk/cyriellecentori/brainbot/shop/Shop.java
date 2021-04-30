@@ -10,6 +10,7 @@ import net.dv8tion.jda.api.managers.GuildManager;
 import tk.cyriellecentori.brainbot.Brainbot;
 import tk.cyriellecentori.brainbot.commands.BotCommand;
 import tk.cyriellecentori.brainbot.commands.MessageCommand;
+import tk.cyriellecentori.brainbot.profiles.Achievement;
 import tk.cyriellecentori.brainbot.profiles.Profile;
 
 public class Shop extends MessageCommand {
@@ -98,6 +99,18 @@ public class Shop extends MessageCommand {
 						} else {
 							response = searched.name + " acheté !";
 							user.money -= searched.cost;
+							user.shopSpent += searched.cost;
+							if(user.shopSpent >= 5000) {
+								user.giveAchievement(new Achievement("Les courses du mois", "Dépensez plus de 5 000 dans les boutiques.", false, 0), message);
+							}
+							if(user.shopSpent >= 15000)
+								user.giveAchievement(new Achievement("Courses de Noël", "Dépensez plus de 15 000 dans les boutiques.", false, 0), message);
+							if(user.shopSpent >= 2500)
+								user.giveAchievement(new Achievement("Bourgeois", "Dépensez plus de 25 000 dans les boutiques.", false, 0), message);
+							if(user.shopSpent >= 50000)
+								user.giveAchievement(new Achievement("Cible du fisc", "Dépensez plus de 50 000 dans les boutiques.", false, 0), message);
+							if(user.shopSpent >= 100000)
+								user.giveAchievement(new Achievement("Nolife", "Dépensez plus de 100 000 dans les boutiques. Vous pouvez désormais retourner à la civilsation.", true, 20000), message);
 						}
 					}
 				}

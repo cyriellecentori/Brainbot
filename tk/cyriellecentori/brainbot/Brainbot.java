@@ -103,15 +103,18 @@ public class Brainbot implements EventListener {
 	public static long cyriellePrivate = 356861332106117120L;
 
 	public static long tarbouchID = 329046715619344385L;
-	public static String version = "2.7.0";
+	public static String version = "2.7";
+	public static String patch = "1";
 	public static String changelog = "```diff\n"
-				+ "Brainbot version " + version + " – Les Succès\n"
+				+ "Brainbot version " + version + ".0 – Les Succès\n"
 				+ "+ Ajout d'un système de Succès\n"
 				+ "+ Ajout de succès en rapport avec le Frigo\n"
 				+ "+ Ajout de succès cachés.\n"
 				+ "+ Ajout de b!achievements.\n"
 				+ "+ Affichage des succès eus sur le profil.\n"
 				+ "- Correction de la lisibilité des aliments.\n"
+				+ "\nPatch " + version + ".1\n"
+				+ "+ Ajout de quelques succès.\n"
 				+ "```";
 
 	public static Random random = new Random();
@@ -630,7 +633,7 @@ public class Brainbot implements EventListener {
 						+ "Ta·ton petit·e ami·e qui est en fait Cyriéphile ? "
 						+ "C'est la faute de MrBoom !"));
 		bcommands.put("invite", new MessageCommand("invite", "Invitez le bot sur votre serveur !", "V'la l'invit : " + jda.getInviteUrl(Permission.values())));
-		bcommands.put("info", new MessageCommand("info", "Des informations moi.", "Bot par Cyrielle#3528, code source disponible sur demande. Version " + version));
+		bcommands.put("info", new MessageCommand("info", "Des informations moi.", "Bot par Cyrielle#3528, code source disponible sur demande. Version " + version + "." + patch));
 		bcommands.put("changelog", new MessageCommand("changelog", "Les dernières modifications du code.", changelog));
 		bcommands.put("ip", new MessageCommand("ip", "Seule une seule personne peut voir mon ip.", "", vecyr, false) {
 			public void execute(Brainbot bb, MessageReceivedEvent message) {

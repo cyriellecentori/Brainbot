@@ -26,6 +26,7 @@ public class Profile{
 	public int[] drinksOfferts = {0,0,0,0,0,0,0};
 	public Vector<Achievement> achievements = new Vector<Achievement>();
 	private Vector<Aliment> frigo = new Vector<Aliment>();
+	public int shopSpent = 0;
 
 	public Profile(long id){
 		this.id = id;
@@ -146,7 +147,7 @@ public class Profile{
 	}
 	
 	public void giveAchievement(Achievement a, MessageReceivedEvent command) {
-		if(!achievements.contains(a)) {
+		if(!hasAchievement(a.name)) {
 			achievements.add(a);
 			money += a.reward;
 			command.getChannel().sendMessage("Succès " + (a.secret ? "secret " : "") + "obtenu !\n**" + a.name + "**" + 
@@ -161,9 +162,24 @@ public class Profile{
 					giveAchievement(af, command);
 				}
 		}
+		int placeDispo = 100;
+		for(Aliment a : frigo) {
+			placeDispo -= a.place;
+		}
+		if(placeDispo == 0) {
+			giveAchievement(new Achievement("Stop ! Y'a plus de place !", "Remplissez votre frigo à bloc.", false, 2500), command);
+		}
 	}
 	
 	public void removeAchievement(int id) {
 		achievements.remove(id);
+	}
+	
+	public boolean hasAchievement(String name) {
+		for(Achievement a : achievements) {
+			if(a.name == name)
+				return true;
+		}
+		return false;
 	}
 }
