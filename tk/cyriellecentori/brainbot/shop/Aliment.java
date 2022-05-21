@@ -1,5 +1,6 @@
 package tk.cyriellecentori.brainbot.shop;
 
+import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import tk.cyriellecentori.brainbot.Brainbot;
 import tk.cyriellecentori.brainbot.profiles.Profile;
@@ -16,9 +17,9 @@ public class Aliment extends Item {
 	}
 
 	@Override
-	public boolean execute(Brainbot bb, Profile buyer, MessageReceivedEvent command) {
+	public boolean execute(Brainbot bb, Profile buyer, TextChannel chan) {
 		boolean ret = buyer.addAliment(this);
-		buyer.checkFrigoAchievements(command);
+		buyer.checkFrigoAchievements(chan);
 		return ret;
 	}
 	

@@ -32,7 +32,6 @@ import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
 import com.google.gson.reflect.TypeToken;
 import net.dv8tion.jda.api.JDA;
-import net.dv8tion.jda.api.JDA.Status;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.OnlineStatus;
 import net.dv8tion.jda.api.Permission;
@@ -53,13 +52,19 @@ import net.dv8tion.jda.api.events.ResumedEvent;
 import net.dv8tion.jda.api.events.guild.GuildBanEvent;
 import net.dv8tion.jda.api.events.guild.member.GuildMemberJoinEvent;
 import net.dv8tion.jda.api.events.guild.member.GuildMemberRemoveEvent;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.EventListener;
+import net.dv8tion.jda.api.interactions.commands.OptionMapping;
+import net.dv8tion.jda.api.interactions.commands.OptionType;
+import net.dv8tion.jda.api.interactions.commands.build.OptionData;
+import net.dv8tion.jda.api.interactions.components.ActionRow;
+import net.dv8tion.jda.api.interactions.components.buttons.Button;
+import net.dv8tion.jda.api.managers.channel.concrete.TextChannelManager;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.dv8tion.jda.api.requests.restaction.AuditableRestAction;
 import net.dv8tion.jda.api.utils.MemberCachePolicy;
-import net.dv8tion.jda.internal.managers.ChannelManagerImpl;
-import tk.cyriellecentori.brainbot.BotExceptions.MoneyException;
 import tk.cyriellecentori.brainbot.Monopoly.*;
 import tk.cyriellecentori.brainbot.commands.BotCommand;
 import tk.cyriellecentori.brainbot.commands.DrinkCommand;
@@ -68,7 +73,6 @@ import tk.cyriellecentori.brainbot.profiles.Achievement;
 import tk.cyriellecentori.brainbot.profiles.AchievementFood;
 import tk.cyriellecentori.brainbot.profiles.Profile;
 import tk.cyriellecentori.brainbot.profiles.ProfilesHandler;
-import tk.cyriellecentori.brainbot.profiles.AchievementFood.Contains;
 import tk.cyriellecentori.brainbot.shop.Aliment;
 import tk.cyriellecentori.brainbot.shop.Shop;
 import tk.cyriellecentori.brainbot.BotExceptions.*;
@@ -98,23 +102,16 @@ public class Brainbot implements EventListener {
 
 	public static int messagesCounter = 0;
 
-	public static String ipaddress = getCurrentIp();
+	public static String ipaddress = getCurrentIp().split("<h2>Connecté en IPv4</h2>")[1].split("<p>")[0].split("/>")[1].split("</")[0];
 
 	public static long cyriellePrivate = 356861332106117120L;
 
 	public static long tarbouchID = 329046715619344385L;
-	public static String version = "2.7";
-	public static String patch = "1";
+	public static String version = "3.0";
+	public static String patch = "0";
 	public static String changelog = "```diff\n"
-				+ "Brainbot version " + version + ".0 – Les Succès\n"
-				+ "+ Ajout d'un système de Succès\n"
-				+ "+ Ajout de succès en rapport avec le Frigo\n"
-				+ "+ Ajout de succès cachés.\n"
-				+ "+ Ajout de b!achievements.\n"
-				+ "+ Affichage des succès eus sur le profil.\n"
-				+ "- Correction de la lisibilité des aliments.\n"
-				+ "\nPatch " + version + ".1\n"
-				+ "+ Ajout de quelques succès.\n"
+				+ "Brainbot version " + version + ".0 – Commandes Slash\n"
+				+ "+ Ajout du support des commandes slash pour bon nombre de commandes."
 				+ "```";
 
 	public static Random random = new Random();
@@ -191,9 +188,11 @@ public class Brainbot implements EventListener {
 
 
 		try {
-			messageLog = new BufferedWriter(new FileWriter("/home/cyrielle/messages.log", true));
-			System.setOut(new PrintStream("/home/cyrielle/botlog.txt"));
-			System.setErr(new PrintStream("/home/cyrielle/boterr.txt"));
+				prefix = "b!";
+				monoPrefix = "bm!";
+				messageLog = new BufferedWriter(new FileWriter("bblogs/messages.log", true));
+				System.setOut(new PrintStream("bblogs/botlog.txt"));
+				System.setErr(new PrintStream("bblogs/boterr.txt"));
 		} catch (FileNotFoundException e1) {
 			e1.printStackTrace();
 		}
@@ -231,7 +230,7 @@ public class Brainbot implements EventListener {
 		String noReactData = "";
 		String profilesData = "";
 
-		BufferedReader noReactFile = new BufferedReader(new FileReader("noreact.json"));
+		BufferedReader noReactFile = new BufferedReader(new FileReader("bbdata/noreact.json"));
 		while(true) {
 			String str = noReactFile.readLine();
 			if(str == null) break;
@@ -240,7 +239,7 @@ public class Brainbot implements EventListener {
 
 		noReactFile.close();
 
-		BufferedReader profilesFile = new BufferedReader(new FileReader("profiles.json"));
+		BufferedReader profilesFile = new BufferedReader(new FileReader("bbdata/profiles.json"));
 		while(true) {
 			String str = profilesFile.readLine();
 			if(str == null) break;
@@ -259,7 +258,7 @@ public class Brainbot implements EventListener {
 
 		try {
 			String worksData = "";
-			BufferedReader worksFile = new BufferedReader(new FileReader("works.json"));
+			BufferedReader worksFile = new BufferedReader(new FileReader("bbdata/works.json"));
 			while(true) {
 				String str = worksFile.readLine();
 				if(str == null) break;
@@ -273,10 +272,9 @@ public class Brainbot implements EventListener {
 		
 		if(serversNoReact == null)
 			serversNoReact = new Vector<Long>();
-		initCommands();
 		try {
 			String tvsData = "";
-			BufferedReader tvsFile = new BufferedReader(new FileReader("tvs.json"));
+			BufferedReader tvsFile = new BufferedReader(new FileReader("bbdata/tvs.json"));
 			while(true) {
 				String str = tvsFile.readLine();
 				if(str == null) break;
@@ -290,7 +288,7 @@ public class Brainbot implements EventListener {
 		
 		try {
 			String monoData = "";
-			BufferedReader monoFile = new BufferedReader(new FileReader("monopoly.json"));
+			BufferedReader monoFile = new BufferedReader(new FileReader("bbdata/monopoly.json"));
 			while(true) {
 				String str = monoFile.readLine();
 				if(str == null) break;
@@ -311,9 +309,9 @@ public class Brainbot implements EventListener {
 
 
 	public static void save() throws IOException {
-		BufferedWriter noReactFile = new BufferedWriter(new FileWriter("noreact.json"));
-		BufferedWriter profilesFile = new BufferedWriter(new FileWriter("profiles.json"));
-		BufferedWriter monopolyFile = new BufferedWriter(new FileWriter("monopoly.json"));
+		BufferedWriter noReactFile = new BufferedWriter(new FileWriter("bbdata/noreact.json"));
+		BufferedWriter profilesFile = new BufferedWriter(new FileWriter("bbdata/profiles.json"));
+		BufferedWriter monopolyFile = new BufferedWriter(new FileWriter("bbdata/monopoly.json"));
 		noReactFile.write(gson.toJson(serversNoReact));
 		profilesFile.write(gson.toJson(profiles));
 		monopolyFile.write(gson.toJson(monopolyParties));
@@ -329,13 +327,18 @@ public class Brainbot implements EventListener {
 		String systemipaddress = ""; 
 		try
 		{ 
-			URL url_name = new URL("http://bot.whatismyipaddress.com"); 
+			URL url_name = new URL("http://ipv4.monipv6.org/"); 
 
 			BufferedReader sc = 
 					new BufferedReader(new InputStreamReader(url_name.openStream())); 
 
 			// reads system IPAddress 
-			systemipaddress = sc.readLine().trim(); 
+			systemipaddress = sc.readLine();
+			while(true) {
+				String str = sc.readLine();
+				if(str == null) break;
+				else systemipaddress = systemipaddress + "\n" + str;
+			}
 		} 
 		catch (Exception e) 
 		{ 
@@ -617,7 +620,14 @@ public class Brainbot implements EventListener {
 		
 		Vector<Long> tarVec = new Vector<Long>();
 		tarVec.add(tarbouchID);
-		bcommands.put("carte", new MessageCommand("carte", "Affiche la liste des boissons. Alias : b!drinks", "Vous avez le choix parmi une multitude de boissons : \n"
+		
+		Vector<Guild> tarVecGuild = new Vector<Guild>();
+		tarVecGuild.add(jda.getGuildById(tarbouchID));
+		
+		Vector<Guild> bolmaVecGuild = new Vector<Guild>();
+		bolmaVecGuild.add(jda.getGuildById(bolmabarID));
+		
+		bcommands.put("carte", new MessageCommand("carte", "Affiche la liste des boissons.", "Vous avez le choix parmi une multitude de boissons : \n"
 							+ "De la bière :beer: (" + prefix + "beer) \n"
 							+ "Du café :coffee: (" + prefix + "coffee) \n"
 							+ "Du thé :tea: (" + prefix + "tea)\n"
@@ -626,25 +636,25 @@ public class Brainbot implements EventListener {
 							+ "Du sake :sake: (" + prefix + "sake)\n"
 							+ "Du yop au jambon (" + prefix + "yop)\n"
 							+ "J'ai de l'eau aussi mais c'est nul (" + prefix + "water)\n"
-							+ "Les prix ? Bof, c'est pas important.\nAlors, vous prenez quoi ?"));
+							+ "Les prix ? Bof, c'est pas important.\nAlors, vous prenez quoi ?", false, true, jda));
 		bcommands.put("drinks", new BotCommand.Alias("drinks", bcommands.get("carte")));
 		bcommands.put("mrboom", new MessageCommand("mrboom", "Toujours de sa faute.", "La fin du monde ? "
 						+ "Une chèvre qui mange tes parents ? "
 						+ "Ta·ton petit·e ami·e qui est en fait Cyriéphile ? "
-						+ "C'est la faute de MrBoom !"));
-		bcommands.put("invite", new MessageCommand("invite", "Invitez le bot sur votre serveur !", "V'la l'invit : " + jda.getInviteUrl(Permission.values())));
-		bcommands.put("info", new MessageCommand("info", "Des informations moi.", "Bot par Cyrielle#3528, code source disponible sur demande. Version " + version + "." + patch));
-		bcommands.put("changelog", new MessageCommand("changelog", "Les dernières modifications du code.", changelog));
+						+ "C'est la faute de MrBoom !", false, false, jda));
+		bcommands.put("invite", new MessageCommand("invite", "Invitez le bot sur votre serveur !", "V'la l'invit : " + jda.getInviteUrl(Permission.values()), false, false, jda));
+		bcommands.put("info", new MessageCommand("info", "Des informations sur moi.", "Bot par Cyrielle#3528, code source disponible sur demande. Version " + version + "." + patch, false, false, jda));
+		bcommands.put("changelog", new MessageCommand("changelog", "Les dernières modifications du code.", changelog, false, false, jda));
 		bcommands.put("ip", new MessageCommand("ip", "Seule une seule personne peut voir mon ip.", "", vecyr, false) {
 			public void execute(Brainbot bb, MessageReceivedEvent message) {
-				this.response = getCurrentIp();
+				this.response = ipaddress;
 				super.execute(bb, message);
 			}
 		});
 		bcommands.put("admingive", new BotCommand("admingive", "Pour donner de l'argent sans en donner.", vecyr, false) {
 			public void execute(Brainbot bb, MessageReceivedEvent message) {
 				int toGive = Integer.parseInt(message.getMessage().getContentRaw().split(" ")[1]);
-				User user = message.getMessage().getMentionedUsers().get(0);
+				User user = message.getMessage().getMentions().getUsers().get(0);
 				Profile pf = profiles.get(user.getIdLong());
 				pf.money += toGive;
 
@@ -665,7 +675,7 @@ public class Brainbot implements EventListener {
 						try {
 							String id = message.getMessage().getContentRaw().split(" ")[1];
 							message.getChannel().sendMessage("BANNED " + message.getGuild().getMemberById(id).getAsMention()).queue();
-							message.getGuild().ban(id, 0).queue();
+							message.getGuild().ban(message.getGuild().getMemberById(id).getUser(), 0).queue();
 						}catch(ArrayIndexOutOfBoundsException e) {
 							message.getChannel().sendMessage("Il manque l'ID de la personne à ban.").queue();
 						}
@@ -693,37 +703,42 @@ public class Brainbot implements EventListener {
 					}
 			}
 		});
-		bcommands.put("money", new BotCommand("money", "Affiche votre argent actuel ou celui des autres en ajoutant une mention utilisateur.") {
-			public void execute(Brainbot bb, MessageReceivedEvent message) {
-				if(message.isFromGuild()) {
-					if(message.getMessage().getMentionedUsers().isEmpty()) {
-						if(message.getAuthor().getIdLong() == cyrielleID) {
-							message.getChannel().sendMessage("Vous avez une quantité infinie d'argent.").queue();
-						} else if(profiles.get(message.getAuthor().getIdLong()).money == 0) {
-							message.getChannel().sendMessage("Vous êtes à sec !").queue();
-						}else {
-							message.getChannel().sendMessage("Vous avez " + profiles.get(message.getAuthor().getIdLong()).money
-									+ " " + getCurrency(message.getGuild().getIdLong()) + ".").queue();
-						}
-					}else if(message.getMessage().getMentionedUsers().get(0).getIdLong() == cyrielleID) {
-						message.getChannel().sendMessage("Cyrielle a une quantité infinie d'argent, voyons !").queue();
-					} else {
-						User toKnow = message.getMessage().getMentionedUsers().get(0);
-						if(profiles.get(toKnow.getIdLong()).money == 0) {
-							message.getChannel().sendMessage(message.getGuild().getMember(toKnow).getEffectiveName() + " est a sec !").queue();
-						}else {
-							message.getChannel().sendMessage(message.getGuild().getMember(toKnow).getEffectiveName()
-									+ " a " + profiles.get(toKnow.getIdLong()).money + " "
-									+ getCurrency(message.getGuild().getIdLong()) + ".").queue();
-						}
-					}
+		bcommands.put("money", new MessageCommand("money", "Affiche votre argent actuel ou celui des autres en ajoutant une mention utilisateur.", "", false, false, jda,
+				new OptionData(OptionType.USER, "utilisateur", "Utilisateur").setRequired(false)) {
+			private void command(Profile profile, boolean other, boolean cyrielle, String monnaie, String pseudo) {
+				if(cyrielle) {
+					response = other ? "Cyrielle a une quantité infinie d’argent, voyons !" : "Vous avez une quantité infinie d’argent.";
+				} else if(!other) {
+					response = (profile.money == 0) ? "Vous êtes à sec !" : ("Vous avez " + profile.money + " " + monnaie + ".");
+				} else {
+					response = (profile.money == 0) ? (pseudo + " est à sec !") : (pseudo + " a " + profile.money + " " + monnaie + ".");
 				}
 			}
-		});
-		bcommands.put("works", new BotCommand("works", "Vous envoie en MP la liste de vos b!work découverts jusqu'à présent.") {
+			
 			public void execute(Brainbot bb, MessageReceivedEvent message) {
-				Profile pro = profiles.get(message.getAuthor().getIdLong());
-				PrivateChannel pv = message.getAuthor().openPrivateChannel().complete();
+				String monnaie = message.isFromGuild() ? getCurrency(message.getGuild().getIdLong()) : "roubles";
+				if(message.getMessage().getMentions().getUsers().isEmpty()) {
+					command(profiles.get(message.getAuthor().getIdLong()), false, message.getAuthor().getIdLong() == cyrielleID, monnaie, "");
+				} else {
+					User toKnow = message.getMessage().getMentions().getUsers().get(0);
+					command(profiles.get(toKnow.getIdLong()), true, toKnow.getIdLong() == cyrielleID, monnaie, message.getGuild().getMember(toKnow).getEffectiveName());
+				}
+				super.execute(bb, message);
+			}
+			
+			public void slashCommand(Brainbot bb, SlashCommandInteractionEvent event) {
+				OptionMapping user = event.getOption("utilisateur");
+				String monnaie = event.isFromGuild() ? getCurrency(event.getGuild().getIdLong()) : "roubles";
+				if(user == null) {
+					command(profiles.get(event.getUser().getIdLong()), false, event.getUser().getIdLong() == cyrielleID, monnaie, "");
+				} else {
+					command(profiles.get(user.getAsUser().getIdLong()), true, user.getAsUser().getIdLong() == cyrielleID, monnaie, user.getAsMember().getEffectiveName());
+				}
+				super.slashCommand(bb, event);
+			}
+		});
+		bcommands.put("works", new MessageCommand("works", "Vous envoie la liste de vos works découverts jusqu'à présent.", "", true, true, jda) {
+			private String list(Profile pro) {
 				String list = "Liste des b!work trouvés jusqu'à présent : \n";
 				for(Entry<Long, Vector<Integer>> entry : pro.worksCollec.entrySet()) {
 					String total = entry.getValue().size() + "/" + works.get(entry.getKey()).length;
@@ -733,6 +748,13 @@ public class Brainbot implements EventListener {
 					}
 					list += "\n";
 				}
+				return list;
+			}
+			
+			public void execute(Brainbot bb, MessageReceivedEvent message) {
+				Profile pro = profiles.get(message.getAuthor().getIdLong());
+				PrivateChannel pv = message.getAuthor().openPrivateChannel().complete();
+				String list = list(pro);
 				if(list.length() >= 2000) {
 					String[] spli = list.split("\n");
 					String send = "";
@@ -749,185 +771,260 @@ public class Brainbot implements EventListener {
 				}
 				message.getChannel().sendMessage("Envoyé en privé !").queue();
 			}
-		});
-		bcommands.put("work", new BotCommand("work", "Travaillez pour gagner de l'argent !") {
-			public void execute(Brainbot bb, MessageReceivedEvent message) {
-				User author = message.getAuthor();
-				MessageChannel channel = message.getChannel();
-				if(message.isFromGuild()) {
-					if(System.currentTimeMillis() - profiles.get(author.getIdLong()).lastwork >= 3600000L) {
-						Profile pro = profiles.get(author.getIdLong());
-						pro.worked++;
-						int modifier = (random.nextInt(5) == 0) ? -1 : 1;
-						int win = (modifier == 1) ? random.nextInt(20) + 30 : -35 - random.nextInt(10);
-						pro.money += win;
-						pro.lastwork = System.currentTimeMillis();
-						String[] worksTab = works.get(message.getGuild().getIdLong() * modifier);
-						
-
-						if(worksTab != null){
-							if(!pro.worksCollec.containsKey(message.getGuild().getIdLong() * modifier)) {
-								pro.worksCollec.put(message.getGuild().getIdLong() * modifier, new Vector<Integer>());
-							}
-							int randomChoice = random.nextInt(worksTab.length);
-							String toSend = worksTab[randomChoice]
-									+ "\nTu " + ((modifier == 1) ? "gagnes " : "perds ") + Math.abs(win) + " "
-									+ getCurrency(message.getGuild().getIdLong()) + ".";
-							if(!pro.worksCollec.get(message.getGuild().getIdLong() * modifier).contains(randomChoice)) {
-								toSend += "\nNouveau b!work ajouté à la collection !";
-								pro.worksCollec.get(message.getGuild().getIdLong() * modifier).add(randomChoice);
-								if(pro.worksCollec.get(message.getGuild().getIdLong() * modifier).size() == works.get(message.getGuild().getIdLong() * modifier).length) {
-									Achievement a = new Achievement("Travailleur acharné — " + message.getGuild().getName() 
-											+ " — " + ((modifier == 1) ? "Positifs" : "Négatifs"), "A collecté tous les travaux " + 
-									((modifier == 1) ? "positifs" : "négatifs") + " de ce serveur.", false, 0);
-									pro.giveAchievement(a, message);
-									toSend += "\nSuccès obtenu !\n" + a.toString();
-								}
-							}
-							channel.sendMessage(toSend).queue();
-						} else {
-							channel.sendMessage("Déso, mais les trucs humour du " + prefix + "work ne sont pas encore dispo pour ce serveur. "
-									+ "Demandez à <40877529973784586> de rajouter ça ! En attendant, tu gagnes "
-									+ win + " " + getCurrency(message.getGuild().getIdLong()) + ".").queue();
-						}
-					}else {
-						channel.sendMessage("T'essayerais pas d'membobiner par hasard ? T'as bossé y'a moins d'une heure "
-								+ "! Aller, ouste ! Encore "
-								+ formatTime(3600000L - (System.currentTimeMillis() - profiles.get(author.getIdLong()).lastwork))).queue();
-					}
-				}
+			
+			public void slashCommand(Brainbot bb, SlashCommandInteractionEvent event) {
+				Profile pro = profiles.get(event.getUser().getIdLong());
+				response = list(pro);
+				super.slashCommand(bb, event);
 			}
 		});
-		bcommands.put("tv", new BotCommand("tv", "Regardez la TV officielle de Tarbouchie !", tarVec, true) {
+		bcommands.put("work", new MessageCommand("work", "Travaillez pour gagner de l'argent !", "", false, false, jda) {
+			public void command(User author, TextChannel channel, Guild guild) {
+				if(System.currentTimeMillis() - profiles.get(author.getIdLong()).lastwork >= 3600000L) {
+					Profile pro = profiles.get(author.getIdLong());
+					pro.worked++;
+					int modifier = (random.nextInt(5) == 0) ? -1 : 1;
+					int win = (modifier == 1) ? random.nextInt(20) + 30 : -35 - random.nextInt(10);
+					pro.money += win;
+					pro.lastwork = System.currentTimeMillis();
+					String[] worksTab = works.get(guild.getIdLong() * modifier);
+					
+
+					if(worksTab != null){
+						if(!pro.worksCollec.containsKey(guild.getIdLong() * modifier)) {
+							pro.worksCollec.put(guild.getIdLong() * modifier, new Vector<Integer>());
+						}
+						int randomChoice = random.nextInt(worksTab.length);
+						response = worksTab[randomChoice]
+								+ "\nTu " + ((modifier == 1) ? "gagnes " : "perds ") + Math.abs(win) + " "
+								+ getCurrency(guild.getIdLong()) + ".";
+						if(!pro.worksCollec.get(guild.getIdLong() * modifier).contains(randomChoice)) {
+							response += "\nNouveau b!work ajouté à la collection !";
+							pro.worksCollec.get(guild.getIdLong() * modifier).add(randomChoice);
+							if(pro.worksCollec.get(guild.getIdLong() * modifier).size() == works.get(guild.getIdLong() * modifier).length) {
+								Achievement a = new Achievement("Travailleur acharné — " + guild.getName() 
+										+ " — " + ((modifier == 1) ? "Positifs" : "Négatifs"), "A collecté tous les travaux " + 
+								((modifier == 1) ? "positifs" : "négatifs") + " de ce serveur.", false, 0);
+								pro.giveAchievement(a, channel);
+								response += "\nSuccès obtenu !\n" + a.toString();
+							}
+						}
+					} else {
+						response = "Déso, mais les trucs humour du " + prefix + "work ne sont pas encore dispo pour ce serveur. "
+								+ "Demandez à Cyrielle de rajouter ça ! En attendant, tu gagnes "
+								+ win + " " + getCurrency(guild.getIdLong()) + ".";
+					}
+				}else {
+					response = "T'essayerais pas d'membobiner par hasard ? T'as bossé y'a moins d'une heure "
+							+ "! Aller, ouste ! Encore "
+							+ formatTime(3600000L - (System.currentTimeMillis() - profiles.get(author.getIdLong()).lastwork));
+				}
+			}
+			
 			public void execute(Brainbot bb, MessageReceivedEvent message) {
-				User author = message.getAuthor();
-				MessageChannel channel = message.getChannel();
+				if(message.isFromGuild()) {
+					command(message.getAuthor(), message.getTextChannel(), message.getGuild());
+					super.execute(bb, message);
+				}
+			}
+			
+			public void slashCommand(Brainbot bb, SlashCommandInteractionEvent event) {
+				if(event.isFromGuild()) {
+					command(event.getUser(), event.getTextChannel(), event.getGuild());
+				} else {
+					response = "Cette commande n’est accessible que dans un serveur.";
+				}
+				super.slashCommand(bb, event);
+			}
+		});
+		bcommands.put("tv", new MessageCommand("tv", "Regardez la TV officielle de Tarbouchie !", "", false, false, tarVecGuild) {
+			public void command(User author) {
 				if(System.currentTimeMillis() - profiles.get(author.getIdLong()).lasttv >= 6L * 3600000L) {
-					channel.sendMessage(tvs[random.nextInt(tvs.length)]
-							+ "\nTa fidélité te rapporte 15 FezDollars !").queue();
+					response = tvs[random.nextInt(tvs.length)] + "\nTa fidélité te rapporte 15 FezDollars !";
 					profiles.get(author.getIdLong()).money += 15;
 					profiles.get(author.getIdLong()).lasttv = System.currentTimeMillis();
 				} else {
-					channel.sendMessage("Assez de TV pour l'instant, il faut être productif !").queue();
+					response = "Assez de TV pour l'instant, il faut être productif !";
 				}
 			}
-		});
-		bcommands.put("give", new BotCommand("give", "Donnez quelque chose à quelqu'un. N'importe quoi.") {
 			public void execute(Brainbot bb, MessageReceivedEvent message) {
-				User author = message.getAuthor();
-				MessageChannel channel = message.getChannel();
-				if(message.isFromGuild())
-					try {
-						int toGive = Integer.parseInt(message.getMessage().getContentRaw().split(" ")[1]);
-						User user = message.getMessage().getMentionedUsers().get(0);
-						profiles.pay(author.getIdLong(), toGive);
-						profiles.get(user.getIdLong()).money += toGive;
+				command(message.getAuthor());
+				super.execute(bb, message);
+			}
+			
+			public void slashCommand(Brainbot bb, SlashCommandInteractionEvent event) {
+				command(event.getUser());
+				super.slashCommand(bb, event);
+			}
+		});
+		bcommands.put("give", new MessageCommand("give", "Donnez de l’argent à quelqu’un", "", false, false, jda,
+				new OptionData(OptionType.USER, "utilisateur", "Cible du don").setRequired(true),
+				new OptionData(OptionType.INTEGER, "quantite", "Quantité d’argent").setRequired(true).setMinValue(1)) {
+			public void command(User author, TextChannel channel, int toGive, User user) {
+				try {
+					profiles.pay(author.getIdLong(), toGive);
+					profiles.get(user.getIdLong()).money += toGive;
 
-						channel.sendMessage(author.getAsMention() + " à offert " + toGive + " balles à " + user.getAsMention()).queue();
-					}catch(NumberFormatException | IndexOutOfBoundsException e) {
-						channel.sendMessage("C'est pas compliqué ! " + prefix + "give argent @Utilisateur ! T'in t'es une merde :poop: !").queue();
-					}catch(NumberException e) {
-						channel.sendMessage("C'est quoi ce nombre de merde là ?").queue();
-					}catch(MoneyException e) {
-						channel.sendMessage("Depuis quand on peut donner de l'argent qu'on a pas ? Hors de ma vue, connard.").queue();
+					response = author.getAsMention() + " à offert " + toGive + " balles à " + user.getAsMention();
+				}catch(NumberException e) {
+					response = "C'est quoi ce nombre de merde là ?";
+				}catch(MoneyException e) {
+					response = "Depuis quand on peut donner de l'argent qu'on a pas ? Hors de ma vue, ouste !";
+				}
+			}
+			
+			public void execute(Brainbot bb, MessageReceivedEvent message) {
+				if(message.isFromGuild()){ 
+					try {
+						command(message.getAuthor(), message.getTextChannel(), Integer.parseInt(message.getMessage().getContentRaw().split(" ")[1]), message.getMessage().getMentions().getUsers().get(0));
+					} catch(NumberFormatException | IndexOutOfBoundsException e) {
+						response = "Utilisation : " + prefix + "give argent @Utilisateur";
 					}
+					super.execute(bb, message);
+				}
+				
+				
+			}
+			
+			public void slashCommand(Brainbot bb, SlashCommandInteractionEvent event) {
+				if(event.isFromGuild()) {
+					command(event.getUser(), event.getTextChannel(), event.getOption("quantite").getAsInt(), event.getOption("utilisateur").getAsUser());
+				} else {
+					response = "Cette commande n’est disponible que dans les serveurs.";
+				}
+				super.slashCommand(bb, event);
 			}
 		});
-		bcommands.put("daily", new BotCommand("daily", "Récupéréz votre revenu universel quotidien.") {
-			public void execute(Brainbot bb, MessageReceivedEvent message) {
-				User author = message.getAuthor();
-				MessageChannel channel = message.getChannel();
-				if(message.isFromGuild())
-					if(System.currentTimeMillis() - profiles.get(author.getIdLong()).lastdaily >= 24 * 3600000L) {
-						profiles.get(author.getIdLong()).dailies++;
-						profiles.get(author.getIdLong()).money += 10;
-						profiles.get(author.getIdLong()).lastdaily = System.currentTimeMillis();
-						channel.sendMessage("Vl'a tes 10 balles! Utilise les bien.").queue();
-					}else {
-						channel.sendMessage("T'essayerais pas d'membobiner par hasard ? Je te les ai déjà filé ! Aller, ouste ! "
-								+ "Encore " + formatTime(24 * 3600000L - (System.currentTimeMillis() - profiles.get(author.getIdLong()).lastdaily))).queue();
-					}
+		bcommands.put("daily", new MessageCommand("daily", "Récupéréz votre revenu universel quotidien.", "", false, false, jda) {
+			public void command(Profile profile) {
+				if(System.currentTimeMillis() - profile.lastdaily >= 24 * 3600000L) {
+					profile.dailies++;
+					profile.money += 10;
+					profile.lastdaily = System.currentTimeMillis();
+					response = "Vl'a tes 10 balles! Utilise les bien.";
+				}else {
+					response = "T'essayerais pas d'membobiner par hasard ? Je te les ai déjà filé ! Aller, ouste ! "
+							+ "Encore " + formatTime(24 * 3600000L - (System.currentTimeMillis() - profile.lastdaily));
+				}
 			}
-		});
-		bcommands.put("top", new BotCommand("top", "Observez les grands gagnants du capitalisme sur ce serveur.") {
+			
 			public void execute(Brainbot bb, MessageReceivedEvent message) {
-				User author = message.getAuthor();
-				MessageChannel channel = message.getChannel();
 				if(message.isFromGuild()) {
-					Vector<Profile> top = new Vector<Profile>();
-					Profile higher = new Profile(author.getIdLong());
-					for(int i = 0; i < profiles.size(); i++) {
-						higher = new Profile(author.getIdLong());
-						for(Member member : message.getGuild().getMembers()) {
-							Profile pf = profiles.getNC(member.getUser().getIdLong());
-							if(pf != null && member.getUser().getIdLong() != cyrielleID) {
-								if(pf.money >= higher.money && !top.contains(pf)) {
-									boolean containingAlready = false;
-									for(Profile pf2 : top) {
-										if(pf2 == pf || pf2.equals(pf)) {
-											containingAlready = true;
-										}
+					command(profiles.get(message.getAuthor().getIdLong()));
+					super.execute(bb, message);
+				}
+			}
+			
+			public void slashCommand(Brainbot bb, SlashCommandInteractionEvent event) {
+				if(event.isFromGuild())
+					command(profiles.get(event.getUser().getIdLong()));
+				else
+					response = "Cette commande n’est disponible que depuis un serveur.";
+				super.slashCommand(bb, event);
+			}
+		});
+		bcommands.put("top", new MessageCommand("top", "Observez les grands gagnants du capitalisme sur ce serveur.", "", false, false, jda) {
+			public void command(User author, Guild guild) {
+				Vector<Profile> top = new Vector<Profile>();
+				Profile higher = new Profile(author.getIdLong());
+				for(int i = 0; i < profiles.size(); i++) {
+					higher = new Profile(author.getIdLong());
+					for(Member member : guild.getMembers()) {
+						Profile pf = profiles.getNC(member.getUser().getIdLong());
+						if(pf != null && member.getUser().getIdLong() != cyrielleID) {
+							if(pf.money >= higher.money && !top.contains(pf)) {
+								boolean containingAlready = false;
+								for(Profile pf2 : top) {
+									if(pf2 == pf || pf2.equals(pf)) {
+										containingAlready = true;
 									}
-									if(!containingAlready) {
-										higher = pf;
-									}
+								}
+								if(!containingAlready) {
+									higher = pf;
 								}
 							}
 						}
-						top.add(higher);
 					}
-					String str = "Classement des plus riches du serveur :\n";
-					for(int i = 0, j = i+1;i < top.size(); i++) {
-						j = i + 1;
-						str = str.concat(j + (j == 1 ? "er/ère" : "ème") + " - " + message.getGuild().getMemberById(top.get(i).id).getEffectiveName() + " : " + top.get(i).money + "\n");
-						if(j == 10) {
-							break;
-						}
+					top.add(higher);
+				}
+				response = "Classement des plus riches du serveur :\n";
+				for(int i = 0, j = i+1;i < top.size(); i++) {
+					j = i + 1;
+					response = response.concat(j + (j == 1 ? "er/ère" : "ème") + " - " + guild.getMemberById(top.get(i).id).getEffectiveName() + " : " + top.get(i).money + "\n");
+					if(j == 10) {
+						break;
 					}
-					for(int i = 0, j = i+1; i < top.size(); i++, j = i+1) {
-						if(top.get(i).id == author.getIdLong()) {
-							str = str.concat("Votre classement : " + j + (j == 1 ? "er/ère" : "ème"));
-							break;
-						}
+				}
+				for(int i = 0, j = i+1; i < top.size(); i++, j = i+1) {
+					if(top.get(i).id == author.getIdLong()) {
+						response = response.concat("Votre classement : " + j + (j == 1 ? "er/ère" : "ème"));
+						break;
 					}
-					channel.sendMessage(str).queue();
 				}
 			}
+			
+			public void execute(Brainbot bb, MessageReceivedEvent message) {
+				if(message.isFromGuild()) {
+					command(message.getAuthor(), message.getGuild());
+					super.execute(bb, message);
+				}
+				
+			}
+			
+			public void slashCommand(Brainbot bb, SlashCommandInteractionEvent event) {
+				if(event.isFromGuild())
+					command(event.getUser(), event.getGuild());
+				else
+					response = "Cette commande n’est disponible que depuis un serveur.";
+				super.slashCommand(bb, event);
+			}
 		});
-		bcommands.put("profile", new BotCommand("profile", "Regardez votre profil ou celui des autres.") {
+		bcommands.put("profile", new MessageCommand("profile", "Regardez votre profil ou celui des autres.", "", false, false, jda,
+				new OptionData(OptionType.USER, "utilisateur", "Utilisateur").setRequired(false)) {
 			public void execute(Brainbot bb, MessageReceivedEvent message) {
 				Profile pro;
 				try {
-					pro = profiles.get(message.getMessage().getMentionedMembers().get(0).getUser().getIdLong());
+					pro = profiles.get(message.getMessage().getMentions().getUsers().get(0).getIdLong());
 				} catch(IndexOutOfBoundsException e) {
 					pro = profiles.get(message.getAuthor().getIdLong());
 				}
-				message.getChannel().sendMessage(pro.toString(message.getGuild())).queue();
+				response = pro.toString(message.getGuild());
+				super.execute(bb, message);
+			}
+			
+			public void slashCommand(Brainbot bb, SlashCommandInteractionEvent event) {
+				Profile pro;
+				OptionMapping user = event.getOption("utilisateur");
+				if(user == null) {
+					pro = profiles.get(event.getUser().getIdLong());
+				} else {
+					pro = profiles.get(user.getAsUser().getIdLong());
+				}
+				response = pro.toString(event.getGuild());
+				super.slashCommand(bb, event);
 			}
 		});
-		bcommands.put("beer", new DrinkCommand("beer", "bière", ":beer:", ":beers:", 4, false, 0));
-		bcommands.put("yop", new DrinkCommand("yop", "Yop au Jambon", "", "", 30, true, 1));
-		bcommands.put("coffee", new DrinkCommand("coffee", "café", ":coffee:", ":coffee:", 3, true, 2));
-		bcommands.put("tea", new DrinkCommand("tea", "thé", ":tea:", ":tea:", 2, true, 3));
-		bcommands.put("wine", new DrinkCommand("wine", "vin", ":wine_glass:", ":champagne_glass:", 8, true, 4));
-		bcommands.put("whisky", new DrinkCommand("whisky", "whisky", ":whisky:", ":whisky:", 5, true, 5));
-		bcommands.put("sake", new DrinkCommand("sake", "sake", ":sake:", ":sake:", 3, true, 6));
-		bcommands.put("water", new BotCommand("water", "") {
-			public void execute(Brainbot bb, MessageReceivedEvent message) {
-				MessageChannel channel = message.getChannel();
-				if(message.isFromGuild())
-					try {
-						if(message.getMessage().getMentionedMembers().get(0).getUser().getId().equals(message.getAuthor().getId())) {
-							channel.sendMessage("T'as pas besoin de te mentionner mais bon... "
-									+ "Voila la fontaine : :potable_water: ").queue();
-						}else if(message.getMessage().getMentionedMembers().get(0).getUser().getId().equals(jda.getSelfUser().getId())) {
-							channel.sendMessage("J'vais t'le balancer à la gueule ton verre d'eau, j'te jure.").queue();
-						}else {
-							channel.sendMessage("MAIS TU VAS PAS OFFRIR DE L'EAU !!! T'ES CON OU QUOI ???").queue();
-						}
-					}catch(IndexOutOfBoundsException e) {
-						channel.sendMessage("Sers toi : :potable_water: ").queue();
+		bcommands.put("beer", new DrinkCommand("beer", "bière", ":beer:", ":beers:", 4, false, 0, jda));
+		bcommands.put("yop", new DrinkCommand("yop", "Yop au Jambon", "", "", 30, true, 1, jda));
+		bcommands.put("coffee", new DrinkCommand("coffee", "café", ":coffee:", ":coffee:", 3, true, 2, jda));
+		bcommands.put("tea", new DrinkCommand("tea", "thé", ":tea:", ":tea:", 2, true, 3, jda));
+		bcommands.put("wine", new DrinkCommand("wine", "vin", ":wine_glass:", ":champagne_glass:", 8, true, 4, jda));
+		bcommands.put("whisky", new DrinkCommand("whisky", "whisky", ":whisky:", ":whisky:", 5, true, 5, jda));
+		bcommands.put("sake", new DrinkCommand("sake", "sake", ":sake:", ":sake:", 3, true, 6, jda));
+		bcommands.put("water", new DrinkCommand("water", "", "", "", 0, false, 7, jda) {
+			public void command(User author, boolean offer, User other) {
+				if(offer) {
+					if(other.getId().equals(author.getId())) {
+						response = "T'as pas besoin de te mentionner mais bon... "
+								+ "Voila la fontaine : :potable_water: ";
+					}else if(other.getId().equals(jda.getSelfUser().getId())) {
+						response = "J'vais t'le balancer à la gueule ton verre d'eau, j'te jure.";
+					}else {
+						response = "MAIS TU VAS PAS OFFRIR DE L'EAU !!! T'ES CON OU QUOI ???";
 					}
+				} else {
+					response = "Sers toi : :potable_water: ";
+				}
 			}
 		});
 		bcommands.put("help", new MessageCommand("help", "Cette page d'aide.", "Voici ainsi tout ce que je peux faire :\n") {
@@ -1003,23 +1100,35 @@ public class Brainbot implements EventListener {
 				message.getMessage().delete().queue();
 			}
 		});
-		bcommands.put("d", new BotCommand("d", "Je lance un dé pour vous.") {
+		bcommands.put("d", new MessageCommand("d", "Je lance un dé pour vous.", "", false, true, jda,
+				new OptionData(OptionType.INTEGER, "limite", "Limite du lancé").setMinValue(2).setMaxValue(10000000).setRequired(true)) {
+			public void command(long nb) {
+				if(nb < 2) {
+					response = "Félicitations, tu n'as __pas__ cassé le système.";
+				}
+				else if(nb > 10000000) {
+					response = "Wooooo doucement on se calme là ! "
+							+ "C'est beaucoup trop gros là, j'ai pas de grue pour lancer ça.";
+				} else {
+					response = "Resultat : " + ((Math.abs(random.nextLong() % nb)) + 1);
+				}
+			}
+			
+			
 			public void execute(Brainbot bb, MessageReceivedEvent message) {
-				MessageChannel channel = message.getChannel();
 				try {
 					String toSay = message.getMessage().getContentRaw().split(" ", 2)[1];
 					long nb = Long.parseLong(toSay);
-					if(nb < 2) throw new NegativeNumberException();
-					else if(nb > 10000000) throw new NullNumberException();
-					channel.sendMessage("Resultat : " + ((Math.abs(random.nextLong() % nb)) + 1)).queue();
+					command(nb);
 				}catch(NumberFormatException | ArrayIndexOutOfBoundsException e) {
-					channel.sendMessage("Heu... il est bizarre ton dé, là. J'y touche pas moi.").queue();
-				}catch(NegativeNumberException e) {
-					channel.sendMessage("Félicitations, tu n'as __pas__ cassé le système.").queue();
-				}catch(NullNumberException e) {
-					channel.sendMessage("Wooooo doucement on se calme là ! "
-							+ "C'est beaucoup trop gros là, j'ai pas de grue pour lancer ça.").queue();
+					response = "Heu... il est bizarre ton dé, là. J'y touche pas moi.";
 				}
+				super.execute(bb, message);
+			}
+			
+			public void slashCommand(Brainbot bb, SlashCommandInteractionEvent event) {
+				command(event.getOption("limite").getAsLong());
+				super.slashCommand(bb, event);
 			}
 		});
 		bcommands.put("stop", new BotCommand("stop", "Me tue pas stp ;-;", vecyr, false) {
@@ -1043,9 +1152,9 @@ public class Brainbot implements EventListener {
 				int note = 0;
 				boolean special =  false;
 				String toJudge = "";
-				if(!msg.getMentions(MentionType.USER).isEmpty()) {
-					note = (int) (msg.getMentionedUsers().get(0).getIdLong() % 101);
-					toJudge = msg.getMentionedUsers().get(0).getAsMention();
+				if(!msg.getMentions().getUsers().isEmpty()) {
+					note = (int) (msg.getMentions().getUsers().get(0).getIdLong() % 101);
+					toJudge = msg.getMentions().getUsers().get(0).getAsMention();
 				}else if(msg.getContentRaw().contains("@everyone")) {
 					channel.sendMessage("Truc à juger : UNE MENTION EVERYONE! Jugement : 0 sur 100").queue();
 					channel.sendMessage("STOP EVERYONE ! C'EST CHIANT PUTAIN ! :middle_finger: ").queue();
@@ -1054,12 +1163,12 @@ public class Brainbot implements EventListener {
 					channel.sendMessage("Truc à juger : UNE MENTION HERE ! Judgement : 1 sur 100").queue();
 					channel.sendMessage("STOP ! C'EST CHIANT ! :middle_finger: ").queue();
 					special = true;
-				}else if(!msg.getMentions(MentionType.ROLE).isEmpty()) {
-					note = (int) (msg.getMentionedRoles().get(0).getIdLong() % 101);
-					toJudge = "Le rôle " + msg.getMentionedRoles().get(0).getName() + ".";
-				}else if(!msg.getMentions(MentionType.CHANNEL).isEmpty()) {
-					note = (int) (msg.getMentionedChannels().get(0).getIdLong() % 101);
-					toJudge = "Le salon " + msg.getMentionedChannels().get(0).getAsMention() + ".";
+				}else if(!msg.getMentions().getRoles().isEmpty()) {
+					note = (int) (msg.getMentions().getRoles().get(0).getIdLong() % 101);
+					toJudge = "Le rôle " + msg.getMentions().getRoles().get(0).getName() + ".";
+				}else if(!msg.getMentions().getChannels().isEmpty()) {
+					note = (int) (msg.getMentions().getChannels().get(0).getIdLong() % 101);
+					toJudge = "Le salon " + msg.getMentions().getChannels().get(0).getAsMention() + ".";
 				}else {
 					toJudge = msg.getContentRaw().split(" ", 2)[1];
 					note = Math.abs(toJudge.toLowerCase().hashCode() % 101);
@@ -1100,28 +1209,37 @@ public class Brainbot implements EventListener {
 		bolmaroles.add(new Shop.RoleItem(9999, 836971648199557160L, "tEm armorr", "tU va dèff tTS lé énmi (Vous rend invulnérable à toutes les insultes)"));
 		bolmitems.put("Rôles", bolmaroles);
 		
-		bcommands.put("bolmashop", new Shop("bolmashop", "La boutique officielle du bar !", bolmitems, bolmaVec));
+		bcommands.put("bolmashop", new Shop("bolmashop", "La boutique officielle du bar !", bolmitems, false, bolmaVecGuild));
 		
-		bcommands.put("frigo", new MessageCommand("frigo", "Je fais la liste de ce que contient votre frigo !", "", bolmaVec, true) {
-			public void execute(Brainbot bb, MessageReceivedEvent message) {
-				if(Brainbot.profiles.get(message.getAuthor().getIdLong()).isFrigoVide())
+		bcommands.put("frigo", new MessageCommand("frigo", "Je fais la liste de ce que contient votre frigo !", "", false, false, jda) {
+			public void command(Profile profile, TextChannel chan) {
+				if(profile.isFrigoVide())
 					response = "Le frigo est vide ;-;";
 				else {
 					response = "Contenu de votre frigo :\n";
-					response += Brainbot.profiles.get(message.getAuthor().getIdLong()).getFrigo();
+					response += profile.getFrigo();
 				}
-				Brainbot.profiles.get(message.getAuthor().getIdLong()).checkFrigoAchievements(message);
+				profile.checkFrigoAchievements(chan);
+			}
+			
+			public void execute(Brainbot bb, MessageReceivedEvent message) {
+				command(Brainbot.profiles.get(message.getAuthor().getIdLong()), message.getTextChannel());
 				super.execute(bb, message);
+			}
+			
+			public void slashCommand(Brainbot bb, SlashCommandInteractionEvent event) {
+				command(Brainbot.profiles.get(event.getUser().getIdLong()), event.getTextChannel());
+				super.slashCommand(bb, event);
 			}
 		});
 		
-		bcommands.put("frigo_note", new MessageCommand("frigo_note", "Je note votre frigo.", "", bolmaVec, true) {
-			public void execute(Brainbot bb, MessageReceivedEvent message) {
-				if(Brainbot.profiles.get(message.getAuthor().getIdLong()).isFrigoVide())
+		bcommands.put("frigo_note", new MessageCommand("frigo_note", "Je note votre frigo.", "", false, false, jda) {
+			public void command(Profile profile, TextChannel chan) {
+				if(profile.isFrigoVide())
 					response = "Le frigo est vide ;-;";
 				else {
 					response = "Note de ton frigo : ";
-					int note = Brainbot.profiles.get(message.getAuthor().getIdLong()).getFrigoScore();
+					int note = profile.getFrigoScore();
 					response += note + "/10 — ";
 					if(note > 10) {
 						response += "INCROYABLE ! Nan franchement je pourrais pas rêver meilleur frigo.";
@@ -1143,8 +1261,17 @@ public class Brainbot implements EventListener {
 						response += "WHAT THE FUCK qu'est-ce que ce PUTAIN de frigo !";
 					}
 				}
-				Brainbot.profiles.get(message.getAuthor().getIdLong()).checkFrigoAchievements(message);
+				profile.checkFrigoAchievements(chan);
+			}
+			
+			public void execute(Brainbot bb, MessageReceivedEvent message) {
+				command(Brainbot.profiles.get(message.getAuthor().getIdLong()), message.getTextChannel());
 				super.execute(bb, message);
+			}
+			
+			public void slashCommand(Brainbot bb, SlashCommandInteractionEvent event) {
+				command(Brainbot.profiles.get(event.getUser().getIdLong()), event.getTextChannel());
+				super.slashCommand(bb, event);
 			}
 		});
 		
@@ -1155,29 +1282,41 @@ public class Brainbot implements EventListener {
 		}
 		aliments.put("Aliments", alimentsVec);
 		
-		bcommands.put("foodshop", new Shop("foodshop", "Le magasin de nourriture du bar !", aliments, bolmaVec));
+		bcommands.put("foodshop", new Shop("foodshop", "Le magasin de nourriture du bar !", aliments, true, jda));
 		
-		bcommands.put("frigo_eat", new MessageCommand("frigo_eat", "Manger quelque chose de votre frigo ! Utilisation : frigo_del ID, ID étant l'identifiant de la position de l'aliment à supprimer.", "", bolmaVec, true) {
-			public void execute(Brainbot bb, MessageReceivedEvent message) {
-				if(Brainbot.profiles.get(message.getAuthor().getIdLong()).isFrigoVide())
+		bcommands.put("frigo_eat", new MessageCommand("frigo_eat", "Manger quelque chose de votre frigo !", "", true, true, jda, 
+				new OptionData(OptionType.INTEGER, "aliment-id", "Numéro de l’Aliment").setMinValue(0).setRequired(true)) {
+			public void command(Profile profile, TextChannel chan, int toDel) {
+				if(profile.isFrigoVide())
 					response = "Le frigo est vide ;-;";
 				else
 					try {
-						int toDel = Integer.parseInt(message.getMessage().getContentRaw().split(" ")[1]);
-						Profile pro = Brainbot.profiles.get(message.getAuthor().getIdLong());
-						Aliment r = pro.removeAliment(toDel);
+						Aliment r = profile.removeAliment(toDel);
 						if(r == null) {
 							response = "Cet aliment n'existe pas.";
 						} else {
 							response = "Tu manges l'aliment « " + r.name + " ».";
 						}
-					} catch(NumberFormatException e) {
-						response = "C'est pas un nombre entier, ça.";
 					} catch(ArrayIndexOutOfBoundsException e) {
 						response = "Tu peux pas tout manger d'un coup.";
 					}
-				Brainbot.profiles.get(message.getAuthor().getIdLong()).checkFrigoAchievements(message);
+				profile.checkFrigoAchievements(chan);
+			}
+			
+			@Override
+			public void execute(Brainbot bb, MessageReceivedEvent message) {
+				try {
+					command(Brainbot.profiles.get(message.getAuthor().getIdLong()), message.getTextChannel(), Integer.parseInt(message.getMessage().getContentRaw().split(" ")[1]));
+				} catch(NumberFormatException e) {
+					response = "C'est pas un nombre entier, ça.";
+				}
 				super.execute(bb, message);
+			}
+			
+			@Override
+			public void slashCommand(Brainbot bb, SlashCommandInteractionEvent event) {
+				command(Brainbot.profiles.get(event.getUser().getIdLong()), event.getTextChannel(), event.getOption("aliment-id").getAsInt());
+				super.slashCommand(bb, event);
 			}
 		});
 		
@@ -1187,7 +1326,7 @@ public class Brainbot implements EventListener {
 			public void execute(Brainbot bb, MessageReceivedEvent message) {
 				try {
 					String[] args = message.getMessage().getContentRaw().split(" ", 5);
-					Brainbot.profiles.get(Long.decode(args[1])).giveAchievement(new Achievement(args[2], args[4], true, Integer.parseInt(args[3])), message);
+					Brainbot.profiles.get(Long.decode(args[1])).giveAchievement(new Achievement(args[2], args[4], true, Integer.parseInt(args[3])), message.getTextChannel());
 				} catch(ArrayIndexOutOfBoundsException | NumberFormatException e) {
 					message.getChannel().sendMessage("Ordre des paramètres : ID_utilisateur nom récompense description.");
 				}
@@ -1224,6 +1363,9 @@ public class Brainbot implements EventListener {
 			}
 			
 		});
+		
+		// Monopoly commands
+		
 		
 		bmcommands.put("admin_init", new BotCommand("admin_init", "Initialisation de la partie de monopoly pour ce serveur.", vecyr, false) {
 			public void execute(Brainbot bb, MessageReceivedEvent message) {
@@ -1364,7 +1506,7 @@ public class Brainbot implements EventListener {
 
 			@Override
 			public void execute(Brainbot bb, MessageReceivedEvent message) {
-				List<User> mention = message.getMessage().getMentionedUsers();
+				List<User> mention = message.getMessage().getMentions().getUsers();
 				Profile pro = (mention.size() == 0) ? profiles.get(message.getAuthor().getIdLong()) : profiles.get(mention.get(0).getIdLong());
 				Vector<Possession> poss = monopolyParties.get(message.getGuild().getIdLong()).getProp(pro);
 				String msgRet = "Liste des propriétés :\n";
@@ -1420,7 +1562,7 @@ public class Brainbot implements EventListener {
 			@Override
 			public void execute(Brainbot bb, MessageReceivedEvent message) {
 				try {
-					List<User> mention = message.getMessage().getMentionedUsers();
+					List<User> mention = message.getMessage().getMentions().getUsers();
 					Profile pro = profiles.get(mention.get(0).getIdLong());
 					int id = Integer.parseInt(message.getMessage().getContentRaw().split(" ")[1]);
 					if(monopolyParties.get(message.getGuild().getIdLong()).isPlaying(pro)) {
@@ -1462,6 +1604,7 @@ public class Brainbot implements EventListener {
 				for(Guild guild : jda.getGuilds()) {
 					guild.loadMembers();
 				}
+				initCommands();
 
 			}else if(event instanceof MessageReceivedEvent) {
 
@@ -1504,6 +1647,10 @@ public class Brainbot implements EventListener {
 
 				System.out.println("Bot reconnecté.");
 
+			} else if(event instanceof SlashCommandInteractionEvent) {
+				slashCommandReceived((SlashCommandInteractionEvent) event);
+			} else if(event instanceof ButtonInteractionEvent) {
+				buttonClicked((ButtonInteractionEvent) event);
 			}
 		}catch(Exception e){
 
@@ -1522,10 +1669,57 @@ public class Brainbot implements EventListener {
 
 		}
 	}
-
+	
+	public LinkedHashMap<String, Vector<String>> multimessages = new LinkedHashMap<String, Vector<String>>();
+	public LinkedHashMap<String, Integer> mmposition = new LinkedHashMap<String, Integer>();
+	
+	public void slashCommandReceived(SlashCommandInteractionEvent event) {
+		try {
+			BotCommand command = bcommands.get(event.getName());
+			if(command.delay) {
+				event.deferReply().queue();
+			}
+			command.slashCommand(this, event);
+		} catch(NullPointerException e) {
+			System.err.println("Commande slash " + event.getCommandString() + " non trouvée.");
+			if(event.isAcknowledged()) {
+				event.getHook().sendMessage("Navré, il y a eu une erreur.").queue();
+			} else {
+				event.reply("Navré, il y a eu une erreur.").queue();
+			}
+			e.printStackTrace();
+		}
+		
+		
+	}
+	
+	public void buttonClicked(ButtonInteractionEvent event) {
+		String cId = event.getComponentId();
+		if(cId.startsWith("mm")) {
+			try {
+				String id = cId.split("-")[0];
+				int next = cId.split("-")[1].equals("n") ? 1 : -1;
+				Vector<String> multimessage = multimessages.get(id);
+				int position = mmposition.get(id) + next;
+				mmposition.put(id, position);
+				event.editMessage(multimessage.get(position)).queue();
+				Button bPrec = event.getMessage().getActionRows().get(0).getButtons().get(0);
+				Button bNext = event.getMessage().getActionRows().get(0).getButtons().get(1);
+				if(position == 0) {
+					event.getHook().editOriginalComponents(ActionRow.of(bPrec.asDisabled(), bNext.asEnabled())).queue();
+				} else if(position == multimessage.size() - 1) {
+					event.getHook().editOriginalComponents(ActionRow.of(bPrec.asEnabled(), bNext.asDisabled())).queue();
+				} else {
+					event.getHook().editOriginalComponents(ActionRow.of(bPrec.asEnabled(), bNext.asEnabled())).queue();
+				}
+			} catch(NullPointerException e) {
+				event.editComponents(event.getMessage().getActionRows().get(0).asDisabled()).queue();
+			}
+		}
+	}
+	
 	public void messageReceived(MessageReceivedEvent event) throws IOException {
 
-		long servID = event.isFromGuild() ? event.getGuild().getIdLong() : 0L;
 		User author = event.getAuthor();
 		Message message = event.getMessage();
 		String msg = message.getContentDisplay();
@@ -1566,7 +1760,7 @@ public class Brainbot implements EventListener {
 		}
 		messagesCounter++;
 
-		if(author.isBot() || author.isFake()) return;
+		if(author.isBot()) return;
 		try {
 			
 			if(!serversNoReact.contains(message.getGuild().getIdLong())) {
@@ -1582,11 +1776,11 @@ public class Brainbot implements EventListener {
 
 			}
 			
+			
+			
 			if(msg.startsWith("Patron, ouvre-moi le second comptoir !")
 					&& message.getGuild().getIdLong() == bolmabarID) {
-
-				ChannelManagerImpl cm =
-						new ChannelManagerImpl(message.getGuild().getGuildChannelById(secondComptoirID));
+				TextChannelManager cm = message.getGuild().getTextChannelById(secondComptoirID).getManager();
 				cm.setParent(message.getGuild().getCategoryById(sallePrincipaleID)).submit().get();
 				cm.sync(message.getGuild().getCategoryById(sallePrincipaleID)).submit().get();
 				message.getGuild().getTextChannelById(secondComptoirID).sendMessage("Et voilà "
@@ -1596,17 +1790,15 @@ public class Brainbot implements EventListener {
 			}
 			if(msg.startsWith("Merci patron, on a fini !")
 					&& channel.getIdLong() == secondComptoirID) {
-
+				TextChannelManager cm = message.getGuild().getTextChannelById(secondComptoirID).getManager();
 				message.getGuild().getTextChannelById(secondComptoirID).sendMessage("Niquel "
 						+ author.getAsMention() + ", je le referme !").queue();
-				ChannelManagerImpl cm =
-						new ChannelManagerImpl(message.getGuild().getGuildChannelById(secondComptoirID));
 				cm.setParent(message.getGuild().getCategoryById(archivesBarID)).submit().get();
 				cm.sync(message.getGuild().getCategoryById(archivesBarID)).submit().get();
 
 			}
 			
-			if(message.getMentionedUsers().contains(jda.getUserById(356861332106117120L))
+			if(message.getMentions().getUsers().contains(jda.getUserById(356861332106117120L))
 					&& message.getGuild().getIdLong() == bolmabarID) {
 				message.addReaction(message.getGuild().getEmoteById(623901460752629760L)).queue();
 			}
@@ -1632,9 +1824,6 @@ public class Brainbot implements EventListener {
 				return;
 			}
 			String[] prefixUsed = split[0].split("!");
-			if(prefixUsed.length != 2) {
-				return;
-			}
 			try {
 				if(prefix.equals(prefixUsed[0] + "!")) {
 					BotCommand com = bcommands.get(prefixUsed[1]);

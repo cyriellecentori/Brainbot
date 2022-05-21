@@ -6,6 +6,7 @@ import java.util.Map.Entry;
 
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.MessageChannel;
+import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 import tk.cyriellecentori.brainbot.Brainbot;
 import tk.cyriellecentori.brainbot.shop.Aliment;
@@ -146,20 +147,20 @@ public class Profile{
 		return frigo.size() == 0;
 	}
 	
-	public void giveAchievement(Achievement a, MessageReceivedEvent command) {
+	public void giveAchievement(Achievement a, TextChannel chan) {
 		if(!hasAchievement(a.name)) {
 			achievements.add(a);
 			money += a.reward;
-			command.getChannel().sendMessage("Succès " + (a.secret ? "secret " : "") + "obtenu !\n**" + a.name + "**" + 
-					((a.reward > 0) ? (" — Vous obtenez " + a.reward + " " + Brainbot.getCurrency(command.getGuild().getIdLong()) + " !") : "")).queue();
+			chan.sendMessage("Succès " + (a.secret ? "secret " : "") + "obtenu !\n**" + a.name + "**" + 
+					((a.reward > 0) ? (" — Vous obtenez " + a.reward + " " + Brainbot.getCurrency(chan.getGuild().getIdLong()) + " !") : "")).queue();
 		}
 	}
 	
-	public void checkFrigoAchievements(MessageReceivedEvent command) {
+	public void checkFrigoAchievements(TextChannel chan) {
 		for(AchievementFood af : AchievementFood.frigoAchievements) {
 			if(!achievements.contains(af))
 				if(af.isUnlock(frigo)) {
-					giveAchievement(af, command);
+					giveAchievement(af, chan);
 				}
 		}
 		int placeDispo = 100;
@@ -167,7 +168,7 @@ public class Profile{
 			placeDispo -= a.place;
 		}
 		if(placeDispo == 0) {
-			giveAchievement(new Achievement("Stop ! Y'a plus de place !", "Remplissez votre frigo à bloc.", false, 2500), command);
+			giveAchievement(new Achievement("Stop ! Y'a plus de place !", "Remplissez votre frigo à bloc.", false, 2500), chan);
 		}
 	}
 	
@@ -177,7 +178,7 @@ public class Profile{
 	
 	public boolean hasAchievement(String name) {
 		for(Achievement a : achievements) {
-			if(a.name == name)
+			if(a.name.equals(name))
 				return true;
 		}
 		return false;
